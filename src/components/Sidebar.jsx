@@ -1,3 +1,5 @@
+import "./Sidebar.css";
+
 import paths from "../constants/paths.js";
 import { useState } from "react";
 
@@ -11,7 +13,7 @@ import {
     CDBSidebarFooter,
 } from "cdbreact";
 
-function SideBar() {
+function Sidebar() {
     const brand = "Gestión de Consorcios";
     const menu = [
         { name: "Reportes", path: paths.reports, icon: "chart-bar" },
@@ -24,7 +26,7 @@ function SideBar() {
     const [activeItem, setActiveItem] = useState(paths.reports);
 
     return (
-        <CDBSidebar textColor="var(--light-text)" backgroundColor="var(--dark-bg)">
+        <CDBSidebar textColor="var(--light-text)" backgroundColor="var(--dark-bg)" className="sidebar">
             <CDBSidebarHeader prefix={<i className="fa fa-bars" />}>
                 <div className="mx-2">{brand}</div>
             </CDBSidebarHeader>
@@ -53,4 +55,4 @@ function SideBar() {
     );
 }
 
-export default SideBar;
+export default Sidebar;

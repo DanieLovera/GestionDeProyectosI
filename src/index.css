@@ -10,6 +10,7 @@
 
     /* Dark theme */
     --dark-bg: #0d1b2a;
+    --dark-bg-secondary: #1b263b;
     --dark-text: var(--bs-dark);
 
     /* Light theme */
