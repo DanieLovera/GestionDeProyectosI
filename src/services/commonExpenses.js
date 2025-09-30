@@ -7,8 +7,8 @@ const getCommonExpenses = async (month) => {
     const commonExpenses = await apis.getCommonExpenses();
 
     return commonExpenses
-        .filter((expense) => format(parseISO(expense.fecha), "MM") === month)
-        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        .filter((expense) => format(parseISO(expense.date), "MM") === month)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
 };
 
 export { getCommonExpenses };

@@ -1,6 +1,8 @@
-import CommonExpensesTable from "../components/CommonExpensesTable.jsx";
-import CommonExpensesFilter from "../components/CommonExpensesFilter.jsx";
+import GenericTable from "../components/GenericTable.jsx";
+import GenericSelect from "../components/GenericSelect.jsx";
 
+import { parseISO, format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getCommonExpenses } from "../services/commonExpenses";
@@ -28,8 +30,28 @@ function CommonExpenses() {
         <div className="p-3">
             <h3 className="mb-3">Gastos Comunes</h3>
 
-            <CommonExpensesFilter chosenMonth={chosenMonth} setChosenMonth={setChosenMonth} months={months} />
-            <CommonExpensesTable expenses={data} emptyMsg="No hay gastos registrados para este mes." />
+            <GenericSelect className="mb-3" value={chosenMonth} setValue={setChosenMonth} options={months} />
+            <GenericTable
+                data={data}
+                columns={[
+                    { key: "description", label: "Concepto" },
+                    {
+                        key: "amount",
+                        label: "Monto",
+                        formatFn: (value) =>
+                            `${value.toLocaleString("es-AR", {
+                                style: "currency",
+                                currency: "ARS",
+                            })}`,
+                    },
+                    {
+                        key: "date",
+                        label: "Fecha",
+                        formatFn: (value) => format(parseISO(value), "dd/MM/yyyy", { locale: es }),
+                    },
+                ]}
+                emptyMsg="No hay gastos para el mes seleccionado."
+            />
         </div>
     );
 }
