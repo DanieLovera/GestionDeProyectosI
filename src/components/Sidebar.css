@@ -1,33 +1,43 @@
 .sidebar {
   width: 220px;
-  background-color: #1f2937; /* gris oscuro */
-  color: white;
-  padding: 20px;
   height: 100vh;
+  background-color: #E0F2FE; 
+  padding: 20px;
   box-sizing: border-box;
+  border-right: 1px solid #bae6fd; 
 }
 
-.sidebar h2 {
+.sidebar-brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1E3A8A; 
   margin-bottom: 20px;
-  font-size: 1.5em;
 }
 
-.sidebar ul {
+.sidebar-menu {
   list-style: none;
   padding: 0;
 }
 
-.sidebar li {
+.sidebar-menu li {
   margin: 15px 0;
 }
 
-.sidebar a {
-  color: white;
+.sidebar-menu a {
+  color: #1E3A8A;
   text-decoration: none;
-  font-weight: normal;
+  font-weight: 500;
+  padding: 5px 10px;
+  display: block;
+  border-radius: 6px;
+  transition: background 0.2s;
 }
 
-.sidebar a.active {
+.sidebar-menu a:hover {
+  background-color: #bfdbfe; 
+}
+
+.sidebar-menu a.active {
+  background-color: #93c5fd; 
   font-weight: bold;
-  text-decoration: underline;
 }

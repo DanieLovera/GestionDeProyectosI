@@ -5,13 +5,13 @@ import "./Sidebar.css";
 export default function Sidebar() {
   return (
     <div className="sidebar">
-      <h2>Menu</h2>
-      <ul>
-        <li><NavLink to={paths.reports}>Reportes</NavLink></li>
-        <li><NavLink to={paths.commonExpenses}>Gastos Comunes</NavLink></li>
-        <li><NavLink to={paths.individualExpenses}>Gastos Particulares</NavLink></li>
-        <li><NavLink to={paths.overdues}>Moras</NavLink></li>
-        <li><NavLink to={paths.fees}>Comisiones</NavLink></li>
+      <h2 className="sidebar-brand">GDPI</h2>
+      <ul className="sidebar-menu">
+        <li><NavLink to={paths.reports} className={({ isActive }) => isActive ? "active" : ""}>Reportes</NavLink></li>
+        <li><NavLink to={paths.commonExpenses} className={({ isActive }) => isActive ? "active" : ""}>Gastos Comunes</NavLink></li>
+        <li><NavLink to={paths.individualExpenses} className={({ isActive }) => isActive ? "active" : ""}>Gastos Particulares</NavLink></li>
+        <li><NavLink to={paths.overdues} className={({ isActive }) => isActive ? "active" : ""}>Moras</NavLink></li>
+        <li><NavLink to={paths.fees} className={({ isActive }) => isActive ? "active" : ""}>Comisiones</NavLink></li>
       </ul>
     </div>
   );

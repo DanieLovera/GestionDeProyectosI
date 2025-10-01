@@ -1,0 +1,25 @@
+.header {
+  height: 60px;
+  background-color: #E0F2FE; 
+  border-bottom: 1px solid #bae6fd;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+
+.text-sidebar {
+  color: #1E3A8A; 
+  font-weight: bold;
+}
+
+
+.user-info {
+  margin-left: auto; 
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #1E3A8A; 
+  font-weight: bold;
+}

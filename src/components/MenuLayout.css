@@ -3,34 +3,16 @@
   height: 100vh;
 }
 
-.sidebar {
-  width: 220px;
-  background-color: #1f2937;
-  color: white;
-  padding: 20px;
-}
 
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-}
-
-.sidebar li {
-  margin: 15px 0;
-}
-
-.sidebar a {
-  color: white;
-  text-decoration: none;
-}
-
-.sidebar a.active {
-  font-weight: bold;
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #F3F8FE; 
 }
 
 .menu-content {
   flex: 1;
   padding: 20px;
-  background-color: #f3f4f6;
   overflow-y: auto;
 }
