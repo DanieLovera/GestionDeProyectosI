@@ -1,0 +1,33 @@
+.sidebar {
+  width: 220px;
+  background-color: #1f2937; /* gris oscuro */
+  color: white;
+  padding: 20px;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.sidebar h2 {
+  margin-bottom: 20px;
+  font-size: 1.5em;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin: 15px 0;
+}
+
+.sidebar a {
+  color: white;
+  text-decoration: none;
+  font-weight: normal;
+}
+
+.sidebar a.active {
+  font-weight: bold;
+  text-decoration: underline;
+}
