@@ -16,12 +16,12 @@ export default function Home() {
         <p>Gestión simplificada para tu comunidad</p>
 
         <div className="button-group">
-          <button onClick={() => alert("Registro")} className="btn-white">
+          <button onClick={() => navigate(paths.register)} className="btn-white">
             Regístrate
-          </button>
-          <button onClick={() => navigate(paths.home)} className="btn-blue">
+            </button>
+          <button onClick={() => navigate(paths.login)} className="btn-blue">
             Inicia sesión
-          </button>
+            </button>
         </div>
       </div>
     </div>
