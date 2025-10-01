@@ -1,8 +1,13 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 import "./Register.css";
 
 export default function Register() {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -46,17 +51,40 @@ export default function Register() {
 
           {/* Número de unidad */}
           <div className="form-group">
-            <input type="text" placeholder="Número de unidad/superficie (opcional)" />
+            <input
+              type="text"
+              placeholder="Número de unidad/superficie (opcional)"
+            />
           </div>
 
           {/* Contraseña */}
-          <div className="form-group">
-            <input type="password" placeholder="Contraseña" required />
+          <div className="form-group password-field">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Contraseña"
+              required
+            />
+            <span
+              className="toggle-password"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </span>
           </div>
 
           {/* Confirmar contraseña */}
-          <div className="form-group">
-            <input type="password" placeholder="Confirmar contraseña" required />
+          <div className="form-group password-field">
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirmar contraseña"
+              required
+            />
+            <span
+              className="toggle-password"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+            </span>
           </div>
 
           {/* Términos */}
@@ -66,7 +94,9 @@ export default function Register() {
           </div>
 
           {/* Botón */}
-          <button type="submit" className="btn-register">Registrarme</button>
+          <button type="submit" className="btn-register">
+            Registrarme
+          </button>
         </form>
 
         {/* Divider */}
@@ -74,8 +104,18 @@ export default function Register() {
 
         {/* Social buttons */}
         <div className="social-buttons">
-          <button className="btn-google">Regístrate con Google</button>
-          <button className="btn-microsoft">Regístrate con Microsoft</button>
+          <button className="btn-google">
+            <FcGoogle size={20} /> Regístrate con Google
+          </button>
+          <button className="btn-microsoft">
+            <img
+              src="https://img.icons8.com/color/48/microsoft.png"
+              alt="Microsoft"
+              width="20"
+              height="20"
+            />
+            Regístrate con Microsoft
+          </button>
         </div>
 
         {/* Link a login */}
