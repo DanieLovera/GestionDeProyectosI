@@ -1,23 +1,31 @@
-import paths from "../constants/paths.js";
+import { Routes, Route } from "react-router-dom";
+import paths from "../constants/paths";
 
-import { Routes as ReactRoutes, Route } from "react-router";
+import Home from "../pages/Home";
+import Register from "../pages/Register";
+import Login from "../pages/Login";
 
-import CommonExpenses from "../pages/CommonExpenses.jsx";
-import IndividualExpenses from "../pages/IndividualExpenses.jsx";
-import Reports from "../pages/Reports.jsx";
-import Overdues from "../pages/Overdues.jsx";
-import Fees from "../pages/Fees.jsx";
+import Reports from "../pages/Reports";
+import CommonExpenses from "../pages/CommonExpenses";
+import IndividualExpenses from "../pages/IndividualExpenses";
+import Overdues from "../pages/Overdues";
+import Fees from "../pages/Fees";
 
-function Routes() {
-    return (
-        <ReactRoutes>
-            <Route path={paths.reports} element={<Reports />} />
-            <Route path={paths.individualExpenses} element={<IndividualExpenses />} />
-            <Route path={paths.commonExpenses} element={<CommonExpenses />} />
-            <Route path={paths.overdues} element={<Overdues />} />
-            <Route path={paths.fees} element={<Fees />} />
-        </ReactRoutes>
-    );
+export default function AppRoutes() {
+  return (
+    <Routes>
+      {/* Páginas “libres” */}
+      <Route path={paths.home} element={<Home />} />
+      <Route path={paths.register} element={<Register />} />
+      <Route path={paths.login} element={<Login />} />
+
+      {/* Páginas con sidebar */}
+      <Route path={paths.reports} element={<Reports />} />
+      <Route path={paths.commonExpenses} element={<CommonExpenses />} />
+      <Route path={paths.individualExpenses} element={<IndividualExpenses />} />
+      <Route path={paths.overdues} element={<Overdues />} />
+      <Route path={paths.fees} element={<Fees />} />
+    </Routes>
+  );
 }
 
-export default Routes;

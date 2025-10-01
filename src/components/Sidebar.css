@@ -1,6 +1,43 @@
 .sidebar {
-    height: 100vh !important;
-    position: sticky !important;
-    top: 0;
-    overflow-y: auto;
+  width: 220px;
+  height: 100vh;
+  background-color: #E0F2FE; 
+  padding: 20px;
+  box-sizing: border-box;
+  border-right: 1px solid #bae6fd; 
+}
+
+.sidebar-brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1E3A8A; 
+  margin-bottom: 20px;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar-menu li {
+  margin: 15px 0;
+}
+
+.sidebar-menu a {
+  color: #1E3A8A;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 5px 10px;
+  display: block;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.sidebar-menu a:hover {
+  background-color: #bfdbfe; 
+}
+
+.sidebar-menu a.active {
+  background-color: #93c5fd; 
+  font-weight: bold;
 }

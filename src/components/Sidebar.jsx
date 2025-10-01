@@ -1,58 +1,18 @@
+import { NavLink } from "react-router-dom";
+import paths from "../constants/paths";
 import "./Sidebar.css";
 
-import paths from "../constants/paths.js";
-import { useState } from "react";
-
-import { Link } from "react-router";
-import {
-    CDBSidebar,
-    CDBSidebarContent,
-    CDBSidebarHeader,
-    CDBSidebarMenu,
-    CDBSidebarMenuItem,
-    CDBSidebarFooter,
-} from "cdbreact";
-
-function Sidebar() {
-    const brand = "Gestión de Consorcios";
-    const menu = [
-        { name: "Reportes", path: paths.reports, icon: "chart-bar" },
-        { name: "Gastos particulares", path: paths.individualExpenses, icon: "wallet" },
-        { name: "Gastos comunes", path: paths.commonExpenses, icon: "building" },
-        { name: "Moras", path: paths.overdues, icon: "exclamation-circle" },
-        { name: "Comisiones", path: paths.fees, icon: "hand-holding-usd" },
-    ];
-
-    const [activeItem, setActiveItem] = useState(paths.reports);
-
-    return (
-        <CDBSidebar textColor="var(--light-text)" backgroundColor="var(--dark-bg)" className="sidebar">
-            <CDBSidebarHeader prefix={<i className="fa fa-bars" />}>
-                <div className="mx-2">{brand}</div>
-            </CDBSidebarHeader>
-
-            <CDBSidebarContent>
-                <CDBSidebarMenu>
-                    {menu.map((item) => (
-                        <Link to={item.path} key={item.name}>
-                            <CDBSidebarMenuItem
-                                icon={item.icon}
-                                active={activeItem === item.path}
-                                onClick={() => setActiveItem(item.path)}
-                            >
-                                {item.name}
-                            </CDBSidebarMenuItem>
-                        </Link>
-                    ))}
-                </CDBSidebarMenu>
-            </CDBSidebarContent>
-
-            <CDBSidebarFooter className="p-3 text-center">
-                <p className="mb-0">GDPI - G6</p>
-                <p className="mb-0">@2025</p>
-            </CDBSidebarFooter>
-        </CDBSidebar>
-    );
+export default function Sidebar() {
+  return (
+    <div className="sidebar">
+      <h2 className="sidebar-brand">GDPI</h2>
+      <ul className="sidebar-menu">
+        <li><NavLink to={paths.reports} className={({ isActive }) => isActive ? "active" : ""}>Reportes</NavLink></li>
+        <li><NavLink to={paths.commonExpenses} className={({ isActive }) => isActive ? "active" : ""}>Gastos Comunes</NavLink></li>
+        <li><NavLink to={paths.individualExpenses} className={({ isActive }) => isActive ? "active" : ""}>Gastos Particulares</NavLink></li>
+        <li><NavLink to={paths.overdues} className={({ isActive }) => isActive ? "active" : ""}>Moras</NavLink></li>
+        <li><NavLink to={paths.fees} className={({ isActive }) => isActive ? "active" : ""}>Comisiones</NavLink></li>
+      </ul>
+    </div>
+  );
 }
-
-export default Sidebar;
