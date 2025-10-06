@@ -14,11 +14,10 @@ import Fees from "../pages/Fees";
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Páginas “libres” */}
-  <Route path={paths.home} element={<Home />} />
-  {/* Login/Register temporarily disabled - redirect to home */}
-  <Route path={paths.register} element={<Navigate to={paths.home} replace />} />
-  <Route path={paths.login} element={<Navigate to={paths.home} replace />} />
+        {/* Páginas “libres” */}
+        <Route path={paths.home} element={<Home />} />
+        <Route path={paths.register} element={<Register />} />
+        <Route path={paths.login} element={<Login />} />
 
       {/* Páginas con sidebar */}
       <Route path={paths.reports} element={<Reports />} />
