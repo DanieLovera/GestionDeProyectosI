@@ -16,11 +16,11 @@ export default function Home() {
         <p>Gestión simplificada para tu comunidad</p>
 
         <div className="button-group">
-          <button onClick={() => navigate(paths.register)} className="btn-white">
-            Regístrate
+            <button onClick={() => navigate(paths.reports)} className="btn-white">
+              Ver panel
             </button>
-          <button onClick={() => navigate(paths.login)} className="btn-blue">
-            Inicia sesión
+            <button onClick={() => navigate(paths.reports)} className="btn-blue">
+              Ir a panel
             </button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getCommonExpenses } from "../services/commonExpenses";
 import { getnPreviousMonth } from "../utils/getnPreviousMonth";
+import units from "../mocks/units";
 
 export default function CommonExpenses() {
   const nPreviousMonths = 2;
@@ -16,6 +17,23 @@ export default function CommonExpenses() {
   const { data = [], isLoading, isError } = useQuery({
     queryKey: ["commonExpenses", chosenMonth],
     queryFn: () => getCommonExpenses(parseInt(chosenMonth)),
+  });
+
+  const [showDistribution, setShowDistribution] = useState(false);
+
+  const totalExpenses = data.reduce((s, e) => s + (e.amount || 0), 0);
+  const totalSurface = units.reduce((s, u) => s + (u.surface || 0), 0);
+
+  const distribution = units.map((u) => {
+    const pct = totalSurface > 0 ? u.surface / totalSurface : 0;
+    const amountToPay = Math.round(totalExpenses * pct);
+    return {
+      id: u.id,
+      unit: u.name,
+      surface: u.surface,
+      pct: `${(pct * 100).toFixed(2)}%`,
+      amount: amountToPay,
+    };
   });
 
   return (
@@ -56,6 +74,52 @@ export default function CommonExpenses() {
             emptyMsg="No hay gastos para el mes seleccionado."
           />
         )}
+
+        {/* Distribution section */}
+        <div className="mt-4">
+          <button className="btn btn-secondary mb-3" onClick={() => setShowDistribution(!showDistribution)}>
+            {showDistribution ? 'Ocultar reparto' : 'Ver reparto por superficie'}
+          </button>
+
+          {showDistribution && (
+            <>
+              <h5>Reparto por superficie</h5>
+              {data.length === 0 ? (
+                <p>No hay gastos para el mes seleccionado.</p>
+              ) : totalSurface === 0 ? (
+                <p>No hay superficies registradas.</p>
+              ) : (
+                <>
+                  <GenericTable
+                    data={distribution}
+                    columns={[
+                      { key: "unit", label: "Unidad" },
+                      { key: "surface", label: "Superficie (m²)" },
+                      { key: "pct", label: "% Participación" },
+                      {
+                        key: "amount",
+                        label: "Monto a pagar",
+                        formatFn: (value) =>
+                          `${value.toLocaleString("es-AR", {
+                            style: "currency",
+                            currency: "ARS",
+                          })}`,
+                      },
+                    ]}
+                    emptyMsg="No hay unidades registradas."
+                  />
+
+                  <div className="mt-2">
+                    <strong>Total gastos: </strong>{' '}
+                    {totalExpenses.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                    <br />
+                    <strong>Total superficie: </strong>{totalSurface} m²
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </MenuLayout>
   );
