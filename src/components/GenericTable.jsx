@@ -6,7 +6,7 @@ function GenericTable({ data = [], columns = [], emptyMsg = "" }) {
         <tr key={row.id}>
             {columns.map((col) => {
                 const rowData = row[col.key];
-                return <td key={col.key}>{col.formatFn ? col.formatFn(rowData) : rowData}</td>;
+                return <td key={col.key}>{col.formatFn ? col.formatFn(rowData, row) : rowData}</td>;
             })}
         </tr>
     ));
