@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import paths from "../constants/paths";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import "./Login.css";
@@ -7,9 +9,15 @@ export default function Login() {
   const [role, setRole] = useState("Administrador");
   const [showPassword, setShowPassword] = useState(false);
 
+  const navigate = useNavigate();
+
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert("Login enviado");
+    // mock login: store user in localStorage and navigate
+    const user = { name: role === 'Administrador' ? 'Admin Demo' : 'Propietario Demo', role };
+    localStorage.setItem('gdpi_user', JSON.stringify(user));
+    navigate(paths.reports);
   };
 
   return (
