@@ -1,5 +1,5 @@
 import Sidebar from "./Sidebar";
-import Header from "./header";
+import Header from "./Header";
 import "./MenuLayout.css";
 
 export default function MenuLayout({ children }) {
