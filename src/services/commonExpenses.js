@@ -11,4 +11,8 @@ const getCommonExpenses = async (month) => {
         .sort((a, b) => new Date(b.date) - new Date(a.date));
 };
 
-export { getCommonExpenses };
+const addCommonExpense = async (expense) => {
+    return await apis.addCommonExpense(expense);
+}
+
+export { getCommonExpenses, addCommonExpense };

@@ -1,22 +1,52 @@
 import MenuLayout from "../components/MenuLayout";
 import GenericTable from "../components/GenericTable.jsx";
 import GenericSelect from "../components/GenericSelect.jsx";
+import AddCommonExpense from "../components/AddCommonExpense.jsx";
 import { parseISO, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getCommonExpenses } from "../services/commonExpenses";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import {
+  getCommonExpenses,
+  addCommonExpense,
+} from "../services/commonExpenses";
 import { getnPreviousMonth } from "../utils/getnPreviousMonth";
+import { FiPlusCircle } from "react-icons/fi";
+import TotalExpense from "../components/TotalExpense.jsx";
 
 export default function CommonExpenses() {
+  const queryClient = useQueryClient();
   const nPreviousMonths = 2;
   const months = getnPreviousMonth(nPreviousMonths);
   const [chosenMonth, setChosenMonth] = useState(months[0].value);
+  const [showAddCommonExpense, setAddCommonExpense] = useState(false);
 
-  const { data = [], isLoading, isError } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["commonExpenses", chosenMonth],
     queryFn: () => getCommonExpenses(parseInt(chosenMonth)),
   });
+
+  const total = data.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+  const addExpenseMutation = useMutation({
+    mutationFn: (expense) => addCommonExpense(expense),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["commonExpenses", chosenMonth]);
+      setAddCommonExpense(false);
+    },
+    onError: (error) => {
+      console.error("Error on adding expense:", error);
+    },
+  });
+
+  const handleAddExpense = async (expense) => {
+    expense.amount = parseFloat(expense.amount);
+    await addExpenseMutation.mutateAsync(expense);
+  };
 
   return (
     <MenuLayout>
@@ -29,6 +59,19 @@ export default function CommonExpenses() {
           setValue={setChosenMonth}
           options={months}
         />
+
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <TotalExpense total={total} />
+
+          <button
+            type="button"
+            className="btn btn-primary d-flex align-items-center gap-2 shadow-sm px-3"
+            onClick={() => setAddCommonExpense(true)}
+          >
+            <FiPlusCircle size={20} />
+            <span>Agregar gasto</span>
+          </button>
+        </div>
 
         {isLoading && <p>Cargando gastos...</p>}
         {isError && <p>Error al cargar los gastos.</p>}
@@ -57,6 +100,12 @@ export default function CommonExpenses() {
           />
         )}
       </div>
+
+      <AddCommonExpense
+        show={showAddCommonExpense}
+        onClose={() => setAddCommonExpense(false)}
+        onSave={handleAddExpense}
+      />
     </MenuLayout>
   );
 }

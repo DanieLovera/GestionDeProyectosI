@@ -7,4 +7,11 @@ const getCommonExpenses = async () => {
     return response;
 };
 
-export { getCommonExpenses };
+const addCommonExpense = async (expense) => {
+    const response = await mockDataFetch({ ...expense, id: Date.now() }, 5000);
+    // Simulate adding to DB by pushing to the mock array
+    commonExpenses.push(response);
+    return response;
+}
+
+export { getCommonExpenses, addCommonExpense };
