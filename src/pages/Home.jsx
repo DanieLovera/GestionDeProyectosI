@@ -18,10 +18,10 @@ export default function Home() {
         <div className="button-group">
           <button onClick={() => navigate(paths.register)} className="btn-white">
             Regístrate
-            </button>
+          </button>
           <button onClick={() => navigate(paths.login)} className="btn-blue">
             Inicia sesión
-            </button>
+          </button>
         </div>
       </div>
     </div>

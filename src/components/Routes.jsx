@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import paths from "../constants/paths";
 
 import Home from "../pages/Home";
@@ -14,10 +14,10 @@ import Fees from "../pages/Fees";
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Páginas “libres” */}
-      <Route path={paths.home} element={<Home />} />
-      <Route path={paths.register} element={<Register />} />
-      <Route path={paths.login} element={<Login />} />
+        {/* Páginas “libres” */}
+        <Route path={paths.home} element={<Home />} />
+        <Route path={paths.register} element={<Register />} />
+        <Route path={paths.login} element={<Login />} />
 
       {/* Páginas con sidebar */}
       <Route path={paths.reports} element={<Reports />} />
