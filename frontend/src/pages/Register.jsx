@@ -3,15 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import "./Register.css";
+import axios from 'axios';
 
 export default function Register() {
   const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert("Registro enviado");
+    const API_URL = import.meta.env.VITE_API_URL;
+    axios.post(`${API_URL}/users`, { name, email, password })
+      .then(response => {
+        console.log("Registro exitoso:", response.data);
+        alert("Registro exitoso");
+        navigate("/login");
+      })
+      .catch(error => {
+        console.error("Error al registrar:", error);
+        alert("Error al registrar");
+      });
   };
 
   return (
@@ -22,12 +36,12 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="register-form">
           {/* Nombre */}
           <div className="form-group">
-            <input type="text" placeholder="Nombre" required />
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" required />
           </div>
 
           {/* Correo electrónico */}
           <div className="form-group">
-            <input type="email" placeholder="Correo electrónico" required />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Correo electrónico" required />
           </div>
 
           {/* Rol */}
@@ -63,6 +77,8 @@ export default function Register() {
               type={showPassword ? "text" : "password"}
               placeholder="Contraseña"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
             <span
               className="toggle-password"
