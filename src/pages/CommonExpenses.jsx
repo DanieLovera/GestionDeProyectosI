@@ -9,8 +9,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { getCommonExpenses, addCommonExpense } from "../services/commonExpenses";
 import { getnPreviousMonth } from "../utils/getnPreviousMonth";
 import { FiPlusCircle } from "react-icons/fi";
-import TotalExpense from "../components/TotalExpense.jsx";
-import units from "../mocks/units";
+import InfoCard from "../components/InfoCard.jsx";
 
 export default function CommonExpenses() {
     const queryClient = useQueryClient();
@@ -28,23 +27,7 @@ export default function CommonExpenses() {
         queryFn: () => getCommonExpenses(parseInt(chosenMonth)),
     });
 
-    // const total = data.reduce((sum, item) => sum + (item.amount || 0), 0);
-    const [showDistribution, setShowDistribution] = useState(false);
-
-    const totalExpenses = data.reduce((s, e) => s + (e.amount || 0), 0);
-    const totalSurface = units.reduce((s, u) => s + (u.surface || 0), 0);
-
-    const distribution = units.map((u) => {
-        const pct = totalSurface > 0 ? u.surface / totalSurface : 0;
-        const amountToPay = Math.round(totalExpenses * pct);
-        return {
-            id: u.id,
-            unit: u.name,
-            surface: u.surface,
-            pct: `${(pct * 100).toFixed(2)}%`,
-            amount: amountToPay,
-        };
-    });
+    const total = data.reduce((sum, item) => sum + (item.amount || 0), 0);
 
     const addExpenseMutation = useMutation({
         mutationFn: (expense) => addCommonExpense(expense),
@@ -70,7 +53,11 @@ export default function CommonExpenses() {
                 <GenericSelect className="mb-3" value={chosenMonth} setValue={setChosenMonth} options={months} />
 
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <TotalExpense total={totalExpenses} />
+                    <InfoCard
+                        title={'Total del mes'}
+                        info={total}
+                        formatFn={(value) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}
+                    />
 
                     <button
                         type="button"
@@ -80,50 +67,6 @@ export default function CommonExpenses() {
                         <FiPlusCircle size={20} />
                         <span>Agregar gasto</span>
                     </button>
-                </div>
-
-                {/* Distribution section */}
-                <div className="mt-4">
-                    <button className="btn btn-secondary mb-3" onClick={() => setShowDistribution(!showDistribution)}>
-                        {showDistribution ? "Ocultar reparto" : "Ver reparto por superficie"}
-                    </button>
-
-                    {showDistribution && (
-                        <>
-                            <h5>Reparto por superficie</h5>
-                            {data.length === 0 ? (
-                                <p>No hay gastos para el mes seleccionado.</p>
-                            ) : totalSurface === 0 ? (
-                                <p>No hay superficies registradas.</p>
-                            ) : (
-                                <>
-                                    <GenericTable
-                                        data={distribution}
-                                        columns={[
-                                            { key: "unit", label: "Unidad" },
-                                            { key: "surface", label: "Superficie (m²)" },
-                                            { key: "pct", label: "% Participación" },
-                                            {
-                                                key: "amount",
-                                                label: "Monto a pagar",
-                                                formatFn: (value) =>
-                                                    `${value.toLocaleString("es-AR", {
-                                                        style: "currency",
-                                                        currency: "ARS",
-                                                    })}`,
-                                            },
-                                        ]}
-                                        emptyMsg="No hay unidades registradas."
-                                    />
-
-                                    <div className="mt-2">
-                                        <strong>Total superficie: </strong>
-                                        {totalSurface} m²
-                                    </div>
-                                </>
-                            )}
-                        </>
-                    )}
                 </div>
 
                 {isLoading && <p>Cargando gastos...</p>}
@@ -137,10 +80,10 @@ export default function CommonExpenses() {
                                 key: "amount",
                                 label: "Monto",
                                 formatFn: (value) =>
-                                    `${value.toLocaleString("es-AR", {
+                                    value.toLocaleString("es-AR", {
                                         style: "currency",
                                         currency: "ARS",
-                                    })}`,
+                                    }),
                             },
                             {
                                 key: "date",

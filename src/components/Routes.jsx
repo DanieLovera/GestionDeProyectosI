@@ -10,6 +10,7 @@ import CommonExpenses from "../pages/CommonExpenses";
 import IndividualExpenses from "../pages/IndividualExpenses";
 import Overdues from "../pages/Overdues";
 import Fees from "../pages/Fees";
+import ExpensesDistribution from "../pages/ExpensesDistribution";
 
 export default function AppRoutes() {
   return (
@@ -25,6 +26,7 @@ export default function AppRoutes() {
       <Route path={paths.individualExpenses} element={<IndividualExpenses />} />
       <Route path={paths.overdues} element={<Overdues />} />
       <Route path={paths.fees} element={<Fees />} />
+      <Route path={paths.expensesDistribution} element={<ExpensesDistribution />} />
     </Routes>
   );
 }
