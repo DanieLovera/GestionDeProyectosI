@@ -7,9 +7,10 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { getnPreviousMonth } from "../utils/getnPreviousMonth";
 import { getIndividualExpenses, addIndividualExpense } from "../services/individualExpenses";
 import GenericSelect from "../components/GenericSelect";
-import TotalExpense from "../components/TotalExpense";
+import InfoCard from "../components/InfoCard";
 import { FiPlusCircle } from "react-icons/fi";
-import AddCommonExpense from "../components/AddCommonExpense.jsx";
+import AddIndividualExpense from "../components/AddIndividualExpense.jsx";
+import { getDepartments } from "../apis/departments.js";
 
 export default function IndividualExpenses() {
     const queryClient = useQueryClient();
@@ -45,6 +46,18 @@ export default function IndividualExpenses() {
 
     const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
+    const {
+        data: departments = [],
+        isLoading: isLoadingDepartments,
+        isError: isErrorDepartments,
+    } = useQuery({
+        queryKey: ["departments"],
+        queryFn: () => getDepartments(),
+    });
+
+
+    console.log(departments);
+
     return (
         <MenuLayout>
             <div className="p-3">
@@ -53,7 +66,11 @@ export default function IndividualExpenses() {
                 <GenericSelect className="mb-3" value={chosenMonth} setValue={setChosenMonth} options={months} />
 
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <TotalExpense total={totalExpenses} />
+                    <InfoCard
+                        title={"Total del mes"}
+                        info={totalExpenses}
+                        formatFn={(value) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}
+                    />
 
                     <button
                         type="button"
@@ -88,7 +105,7 @@ export default function IndividualExpenses() {
                     />
                 )}
             </div>
-            <AddCommonExpense
+            <AddIndividualExpense
                 show={showIndividualExpense}
                 onClose={() => setShowIndividualExpense(false)}
                 onSave={handleAddExpense}
