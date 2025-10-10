@@ -7,3 +7,5 @@
 5. npm install date-fns
 6. npm install react-icons
 7. npm run dev 
+tener el docker desktop abierto y
+hacer docker compose up --build 
