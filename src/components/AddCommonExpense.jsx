@@ -7,6 +7,7 @@ import DatePicker from "react-datepicker";
 import { es } from "date-fns/locale";
 import { NumericFormat } from "react-number-format";
 import { format } from "date-fns";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 import "./AddCommonExpense.css";
 
@@ -142,6 +143,8 @@ export default function AddCommonExpense({ show, onSave, onClose }) {
                                     placeholderText="Seleccionar fecha"
                                     locale={es}
                                     dateFormat="dd/MM/yyyy"
+                                    minDate={startOfMonth(new Date())}
+                                    maxDate={endOfMonth(new Date())}
                                     selected={data.date}
                                     onChange={handleDateChange}
                                 />
