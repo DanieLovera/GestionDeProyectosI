@@ -1,4 +1,4 @@
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 
 export default function ReportCategoryChart({ data = [] }) {
   return (
@@ -9,7 +9,11 @@ export default function ReportCategoryChart({ data = [] }) {
           <XAxis dataKey="name" />
           <YAxis tickFormatter={(v) => v.toLocaleString('es-AR')} />
           <Tooltip formatter={(v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })} />
-          <Bar dataKey="amount" fill="#4e73df" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.name === 'Comisión' ? '#e67e22' : '#4e73df'} />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

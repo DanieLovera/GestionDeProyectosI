@@ -1,5 +1,6 @@
 import units from "./units";
 import commonExpenses from "./commonExpenses";
+import { getCommissionForMonth } from "../services/commission";
 import payments from "./payments";
 
 // util simple para agrupar por categoría: asumimos que algunos gastos comunes tendrán 'category' pronto.
@@ -14,7 +15,9 @@ const guessCategory = (desc) => {
 
 export const buildDashboardMock = (month) => {
   const mm = month.toString().padStart(2, "0");
-  const exp = commonExpenses.filter((e) => e.date.slice(5, 7) === mm);
+  let exp = commonExpenses.filter((e) => e.date.slice(5, 7) === mm);
+  const commission = getCommissionForMonth(month);
+  if (commission) exp = [...exp, { ...commission }];
   const totalCommon = exp.reduce((s, e) => s + (e.amount || 0), 0);
   const collected = payments.filter((p) => p.date.slice(5, 7) === mm).reduce((s, p) => s + (p.amount || 0), 0);
   const period = { month: parseInt(mm, 10), year: 2025 };
@@ -31,7 +34,9 @@ export const buildDashboardMock = (month) => {
 
 export const buildByUnitMock = (month) => {
   const mm = month.toString().padStart(2, "0");
-  const exp = commonExpenses.filter((e) => e.date.slice(5, 7) === mm);
+  let exp = commonExpenses.filter((e) => e.date.slice(5, 7) === mm);
+  const commission = getCommissionForMonth(month);
+  if (commission) exp = [...exp, { ...commission }];
   const totalCommon = exp.reduce((s, e) => s + (e.amount || 0), 0);
   const totalSurface = units.reduce((s, u) => s + (u.surface || 0), 0);
   const pays = payments.filter((p) => p.date.slice(5, 7) === mm);
@@ -58,10 +63,12 @@ export const buildByUnitMock = (month) => {
 
 export const buildByCategoryMock = (month) => {
   const mm = month.toString().padStart(2, "0");
-  const exp = commonExpenses.filter((e) => e.date.slice(5, 7) === mm);
+  let exp = commonExpenses.filter((e) => e.date.slice(5, 7) === mm);
+  const commission = getCommissionForMonth(month);
+  if (commission) exp = [...exp, { ...commission, description: "Comisión" }];
   const buckets = {};
   exp.forEach((e) => {
-    const cat = guessCategory(e.description);
+    const cat = e.__isCommission ? "Comisión" : guessCategory(e.description);
     buckets[cat] = (buckets[cat] || 0) + (e.amount || 0);
   });
   const categories = Object.entries(buckets).map(([name, amount]) => ({ name, amount }));
