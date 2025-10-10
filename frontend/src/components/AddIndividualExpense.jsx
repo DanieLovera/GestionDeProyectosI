@@ -110,7 +110,6 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
                     <Modal.Body className="py-3 px-4">
                         <GenericSelect
                             label="Unidad"
-                            className="mb-3"
                             value={data.unitId}
                             setValue={handleDepartmentChange}
                             options={departmentOptions}

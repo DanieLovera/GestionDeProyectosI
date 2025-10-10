@@ -1,4 +1,3 @@
-import { useState } from "react";
 import Form from "react-bootstrap/Form";
 
 function GenericSelect({
@@ -12,13 +11,8 @@ function GenericSelect({
     emptyOptionLabel = "-- ninguno --",
     showEmptyOption = false,
 }) {
-    const [dirty, setDirty] = useState(false);
-    const showError = dirty && !!errorMessage;
-
-    const handleBlur = () => setDirty(true);
     const handleChange = (e) => {
         setValue(e.target.value);
-        if (!dirty) setDirty(true);
     };
 
     return (
@@ -30,10 +24,9 @@ function GenericSelect({
             )}
             <Form.Select
                 id="generic-select"
-                className={`${className} ${showError ? "is-invalid" : ""}`}
+                className={`${className} ${errorMessage ? "is-invalid" : ""}`}
                 value={value || ""}
                 onChange={handleChange}
-                onBlur={handleBlur}
             >
                 {showEmptyOption && <option value="">{emptyOptionLabel}</option>}
                 {options.map((option) => (
@@ -42,7 +35,7 @@ function GenericSelect({
                     </option>
                 ))}
             </Form.Select>
-            <Form.Control.Feedback type="invalid">{showError && errorMessage}</Form.Control.Feedback>
+            <Form.Control.Feedback type="invalid">{errorMessage}</Form.Control.Feedback>
         </Form.Group>
     );
 }
