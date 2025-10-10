@@ -1,23 +1,28 @@
-import http from "./http";
+import units from "../mocks/units";
+
+const mockDataFetch = (data, delay = 500) => new Promise((resolve) => setTimeout(() => resolve(data), delay));
 
 export const getUnits = async () => {
-  const { data } = await http.get("/units");
-  return data;
+  return mockDataFetch([...units], 400);
 };
 
 export const addUnit = async ({ name, surface, owner }) => {
-  const payload = { name, surface: Number(surface) || 0, owner: owner || "" };
-  const { data } = await http.post("/units", payload);
-  return data;
+  const id = `U${Date.now()}`;
+  const unit = { id, name, surface: Number(surface) || 0, owner: owner || "" };
+  units.push(unit);
+  return mockDataFetch(unit, 400);
 };
 
 export const updateUnit = async (id, { name, surface, owner }) => {
-  const payload = { name, surface: Number(surface) || 0, owner: owner || "" };
-  const { data } = await http.put(`/units/${id}`, payload);
-  return data;
+  const idx = units.findIndex((u) => u.id === id);
+  if (idx === -1) throw new Error("Unidad no encontrada");
+  units[idx] = { ...units[idx], name, surface: Number(surface) || 0, owner: owner || "" };
+  return mockDataFetch(units[idx], 300);
 };
 
 export const deleteUnit = async (id) => {
-  const { data } = await http.delete(`/units/${id}`);
-  return data;
+  const idx = units.findIndex((u) => u.id === id);
+  if (idx === -1) throw new Error("Unidad no encontrada");
+  const [removed] = units.splice(idx, 1);
+  return mockDataFetch(removed, 300);
 };

@@ -1,13 +1,17 @@
-import http from "./http";
+import commonExpenses from "../mocks/commonExpenses.js";
+
+const mockDataFetch = (data, delay) => new Promise((resolve) => setTimeout(() => resolve(data), delay));
 
 const getCommonExpenses = async () => {
-    const { data } = await http.get("/common-expenses");
-    return data;
+    const response = await mockDataFetch(commonExpenses, 1000);
+    return response;
 };
 
 const addCommonExpense = async (expense) => {
-    const { data } = await http.post("/common-expenses", expense);
-    return data;
+    const response = await mockDataFetch({ ...expense, id: Date.now() }, 5000);
+    // Simulate adding to DB by pushing to the mock array
+    commonExpenses.push(response);
+    return response;
 }
 
 export { getCommonExpenses, addCommonExpense };
