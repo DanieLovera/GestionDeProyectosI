@@ -9,11 +9,11 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { getCommonExpenses, addCommonExpense } from "../services/commonExpenses";
 import { getnPreviousMonth } from "../utils/getnPreviousMonth";
 import { FiPlusCircle } from "react-icons/fi";
+import { nPreviousMonths } from "../constants/config.js";
 import InfoCard from "../components/InfoCard.jsx";
 
 export default function CommonExpenses() {
     const queryClient = useQueryClient();
-    const nPreviousMonths = 2;
     const months = getnPreviousMonth(nPreviousMonths);
     const [chosenMonth, setChosenMonth] = useState(months[0].value);
     const [showAddCommonExpense, setAddCommonExpense] = useState(false);
