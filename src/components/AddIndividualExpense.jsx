@@ -12,6 +12,7 @@ import "./AddIndividualExpense.css";
 import GenericSelect from "./GenericSelect";
 import { getDepartments } from "../apis/departments.js";
 import { useQuery } from "@tanstack/react-query";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 export default function AddIndividualExpense({ show, onSave, onClose }) {
     const { data: departments = [] } = useQuery({
@@ -176,6 +177,8 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
                                     locale={es}
                                     dateFormat="dd/MM/yyyy"
                                     selected={data.date}
+                                    minDate={startOfMonth(new Date())}
+                                    maxDate={endOfMonth(new Date())}
                                     onChange={handleDateChange}
                                 />
                                 {error.date && <div className="invalid-feedback d-block">{error.date}</div>}
