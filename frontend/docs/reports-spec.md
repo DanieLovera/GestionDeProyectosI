@@ -16,6 +16,19 @@ Response shape:
   }
 }
 
+Ejemplo JSON:
+```
+{
+  "period": { "month": 10, "year": 2025 },
+  "totals": {
+    "commonExpenses": 180000,
+    "collected": 145000,
+    "overdue": 35000,
+    "lateFees": 1200
+  }
+}
+```
+
 ## 2) Reporte por unidad (estado de cuenta resumido)
 GET /reports/by-unit?month=MM&year=YYYY
 
@@ -36,6 +49,19 @@ Response shape:
   ]
 }
 
+Ejemplo JSON:
+```
+{
+  "period": { "month": 10, "year": 2025 },
+  "units": [
+    { "id": "U1", "name": "Depto 1", "surface": 50, "participationPct": 0.31, "amount": 56000, "paid": 40000, "pending": 16000, "lateFee": 300 },
+    { "id": "U2", "name": "Depto 2", "surface": 40, "participationPct": 0.25, "amount": 45000, "paid": 45000, "pending": 0, "lateFee": 0 },
+    { "id": "U3", "name": "Depto 3", "surface": 30, "participationPct": 0.19, "amount": 34000, "paid": 25000, "pending": 9000, "lateFee": 200 },
+    { "id": "U4", "name": "Depto 4", "surface": 20, "participationPct": 0.12, "amount": 23000, "paid": 15000, "pending": 8000, "lateFee": 100 }
+  ]
+}
+```
+
 ## 3) Gastos por categoría/mes (series para gráficos)
 GET /reports/by-category?month=MM&year=YYYY
 
@@ -49,6 +75,19 @@ Response shape:
     { "name": "Otros", "amount": number }
   ]
 }
+
+Ejemplo JSON:
+```
+{
+  "period": { "month": 10, "year": 2025 },
+  "categories": [
+    { "name": "Limpieza", "amount": 42000 },
+    { "name": "Seguridad", "amount": 60000 },
+    { "name": "Mantenimiento", "amount": 52000 },
+    { "name": "Otros", "amount": 26000 }
+  ]
+}
+```
 
 ## 4) Movimientos por unidad (detalle)
 GET /reports/unit-movements?unitId=U1&month=MM&year=YYYY
@@ -65,6 +104,20 @@ Response shape:
   ],
   "balance": number // suma de movements
 }
+
+Ejemplo JSON:
+```
+{
+  "unit": { "id": "U1", "name": "Depto 1" },
+  "period": { "month": 10, "year": 2025 },
+  "movements": [
+    { "date": "2025-10-01", "type": "expense", "description": "Expensa 10/2025", "amount": 56000 },
+    { "date": "2025-10-05", "type": "payment", "description": "Pago transferencia", "amount": -40000 },
+    { "date": "2025-10-12", "type": "lateFee", "description": "Mora diaria", "amount": 300 }
+  ],
+  "balance": 16300
+}
+```
 
 ## Reglas y consideraciones
 - La expensa generada por unidad = Total gastos comunes del periodo * (surface / totalSurface).
