@@ -3,6 +3,7 @@ import InfoCard from "../components/InfoCard";
 import ReportCategoryChart from "../components/ReportCategoryChart";
 import GenericTable from "../components/GenericTable";
 import UnitMovementsModal from "../components/UnitMovementsModal";
+import UnitAccountSection from "../components/UnitAccountSection";
 import GenericSelect from "../components/GenericSelect";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -79,7 +80,15 @@ export default function Reports() {
 
         <div className="d-flex justify-content-between align-items-center mt-4 mb-2">
           <h5 className="mb-0">Resumen por unidad</h5>
-          <button className="btn btn-outline-secondary btn-sm" onClick={handleExport}>Exportar CSV</button>
+          <div className="d-flex gap-2 align-items-center">
+            <select className="form-select form-select-sm" style={{ width: 220 }} value={selectedUnit?.id || ''} onChange={(e) => setSelectedUnit(byUnit?.units.find(u => u.id === e.target.value) || null)}>
+              <option value="">Seleccionar unidad...</option>
+              {byUnit?.units?.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+            <button className="btn btn-outline-secondary btn-sm" onClick={handleExport}>Exportar CSV</button>
+          </div>
         </div>
         <GenericTable
           data={tableRows}
@@ -105,6 +114,7 @@ export default function Reports() {
           unit={selectedUnit}
           month={chosenMonth}
         />
+          <UnitAccountSection unitId={selectedUnit?.id} month={chosenMonth} />
       </div>
     </MenuLayout>
   );
