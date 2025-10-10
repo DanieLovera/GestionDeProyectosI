@@ -16,10 +16,11 @@ export default function Home() {
         <p>Gestión simplificada para tu comunidad</p>
 
         <div className="button-group">
-          <button onClick={() => navigate(paths.register)} className="btn-white">
+          {/* Temporalmente redirige a la zona con Sidebar y contenido principal */}
+          <button onClick={() => navigate(paths.reports)} className="btn-white">
             Regístrate
           </button>
-          <button onClick={() => navigate(paths.login)} className="btn-blue">
+          <button onClick={() => navigate(paths.reports)} className="btn-blue">
             Inicia sesión
           </button>
         </div>
