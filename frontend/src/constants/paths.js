@@ -8,6 +8,7 @@ const paths = {
   overdues: "/moras",
   fees: "/comisiones",
   expensesDistribution: "/distribucion_gastos",
+  units: "/unidades",
 };
 
 export default paths;

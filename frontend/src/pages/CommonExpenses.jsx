@@ -74,7 +74,9 @@ export default function CommonExpenses() {
                 {!isLoading && !isError && (
                     <GenericTable
                         data={data}
+                        rowClassName={(row) => row.__isCommission ? 'table-warning' : undefined}
                         columns={[
+                            { key: "__isCommission", label: "Tipo", formatFn: (v) => v ? 'Comisión' : 'Gasto' },
                             { key: "description", label: "Concepto" },
                             {
                                 key: "amount",

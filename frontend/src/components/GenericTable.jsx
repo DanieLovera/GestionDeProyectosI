@@ -1,9 +1,9 @@
 import Table from "react-bootstrap/Table";
 
-function GenericTable({ data = [], columns = [], emptyMsg = "" }) {
+function GenericTable({ data = [], columns = [], emptyMsg = "", rowClassName }) {
     const header = columns.map((col) => <th key={col.key}>{col.label}</th>);
     const body = data.map((row) => (
-        <tr key={row.id}>
+        <tr key={row.id} className={typeof rowClassName === 'function' ? rowClassName(row) : undefined}>
             {columns.map((col) => {
                 const rowData = row[col.key];
                 return <td key={col.key}>{col.formatFn ? col.formatFn(rowData, row) : rowData}</td>;

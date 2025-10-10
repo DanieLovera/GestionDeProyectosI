@@ -1,9 +1,12 @@
+// Pagos mock: referencian unidades por id (ver src/mocks/units.js)
+// y usan fechas ISO para permitir filtrado por mes.
+
 const payments = [
-  { id: 1, unit: 'Depto 1', amount: 5000, date: '2025-09-10' },
-  { id: 2, unit: 'Depto 2', amount: 10000, date: '2025-08-20' },
-  { id: 3, unit: 'Depto 4', amount: 2000, date: '2025-10-02' },
-  // partial payment for Depto 1 after due
-  { id: 4, unit: 'Depto 1', amount: 3000, date: '2025-10-05' },
+  // Ejemplos: algunos pagos del mes actual (octubre 2025)
+  { id: 1, unitId: 'U1', amount: 8000, method: 'transferencia', date: '2025-10-05' },
+  { id: 2, unitId: 'U2', amount: 6000, method: 'efectivo', date: '2025-10-06' },
+  // Mes anterior
+  { id: 3, unitId: 'U3', amount: 5000, method: 'transferencia', date: '2025-09-25' },
 ];
 
 export default payments;
