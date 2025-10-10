@@ -10,18 +10,32 @@ import { format } from "date-fns";
 
 import "./AddIndividualExpense.css";
 import GenericSelect from "./GenericSelect";
+import { getDepartments } from "../apis/departments.js";
+import { useQuery } from "@tanstack/react-query";
 
 export default function AddIndividualExpense({ show, onSave, onClose }) {
+    const { data: departments = [] } = useQuery({
+        queryKey: ["departments"],
+        queryFn: () => getDepartments(),
+    });
+
+    const departmentOptions = departments.map((department) => {
+        return {
+            label: department.name,
+            value: department.id,
+        };
+    });
+
     const [data, setData] = useState({
-        unit: "",
+        unitId: "",
         description: "",
         amount: "",
         date: "",
     });
     const [error, setError] = useState({});
-    const [isSaving, setIsSaving] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
-    const clearData = () => setData({ unit: "", description: "", amount: "", date: "" });
+    const clearData = () => setData({ unitId: "", description: "", amount: "", date: "" });
     const clearError = () => setError({});
     const clearState = () => {
         clearData();
@@ -31,6 +45,7 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
     const validateForm = () => {
         const error = {};
 
+        if (!data.unitId) error.unitId = "El campo unidad es obligatorio";
         if (!data.description.trim()) error.description = "El campo concepto es obligatorio";
         if (!data.amount) error.amount = "El campo monto es obligatorio y debe ser numérico";
         if (!data.date) error.date = "El campo fecha es obligatorio";
@@ -44,6 +59,10 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
         setData((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleDepartmentChange = (value) => {
+        setData((prev) => ({ ...prev, unitId: value }));
+    };
+
     const handleDateChange = (date) => {
         setData((prev) => ({ ...prev, date }));
     };
@@ -52,7 +71,7 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
         e.preventDefault();
         if (validateForm()) {
             try {
-                setIsSaving(true);
+                setIsProcessing(true);
                 await onSave({
                     ...data,
                     date: format(data.date, "yyyy-MM-dd"),
@@ -62,7 +81,7 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
                 // Handle error if needed
                 console.error("Error saving expense");
             } finally {
-                setIsSaving(false);
+                setIsProcessing(false);
             }
         }
     };
@@ -75,7 +94,7 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
     return (
         <Modal show={show} onHide={handleClose} backdrop="static" centered>
             <div className="modal-wrapper">
-                {isSaving && (
+                {isProcessing && (
                     <div className="saving-overlay">
                         <Spinner animation="border" role="status" variant="primary" className="saving-spinner" />
                         <span className="saving-text fw-semibold text-primary">Guardando...</span>
@@ -83,22 +102,22 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
                 )}
 
                 <Form onSubmit={handleSubmit}>
-                    <Modal.Header className="py-3 px-4" closeButton={!isSaving}>
+                    <Modal.Header className="py-3 px-4" closeButton={!isProcessing}>
                         <Modal.Title>Agregar gasto individual</Modal.Title>
                     </Modal.Header>
 
                     <Modal.Body className="py-3 px-4">
-                        <Form.Group className="mb-3">
-                            <Form.Label htmlFor="description">Unidad</Form.Label>
-                            <GenericSelect
-                                className="mb-3"
-                                options={[
-                                    { value: "todo1", label: "Departamento 1" },
-                                    { value: "todo2", label: "Departamento 2" },
-                                    { value: "todo3", label: "Departamento 3" },
-                                ]}
-                            />
-                        </Form.Group>
+                        <GenericSelect
+                            label="Unidad"
+                            className="mb-3"
+                            value={data.unitId}
+                            setValue={handleDepartmentChange}
+                            options={departmentOptions}
+                            required={true}
+                            showEmptyOption={true}
+                            errorMessage={error.unitId}
+                            emptyOptionLabel="-- Seleccionar Unidad --"
+                        />
 
                         <Form.Group className="mb-3">
                             <Form.Label htmlFor="description">

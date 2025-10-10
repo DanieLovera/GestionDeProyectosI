@@ -16,7 +16,11 @@ const getIndividualExpenses = async (month) => {
 };
 
 const addIndividualExpense = async (expense) => {
-    return await apis.addIndividualExpense(expense);
+    console.log("Adding individual expense:", expense);
+
+    const result = await apis.addIndividualExpense(expense);
+    // console.log("Result from API:", result);
+    return result;
 };
 
 export { getIndividualExpenses, addIndividualExpense };

@@ -7,9 +7,9 @@ import { getDepartments } from "../apis/departments.js";
 import { getCommonExpenses } from "../services/commonExpenses";
 import GenericTable from "../components/GenericTable.jsx";
 import InfoCard from "../components/InfoCard.jsx";
+import { nPreviousMonths } from "../constants/config.js";
 
 export default function Reports() {
-    const nPreviousMonths = 2;
     const months = getnPreviousMonth(nPreviousMonths);
     const [chosenMonth, setChosenMonth] = useState(months[0].value);
 

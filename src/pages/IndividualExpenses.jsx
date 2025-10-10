@@ -9,12 +9,11 @@ import { getIndividualExpenses, addIndividualExpense } from "../services/individ
 import GenericSelect from "../components/GenericSelect";
 import InfoCard from "../components/InfoCard";
 import { FiPlusCircle } from "react-icons/fi";
+import { nPreviousMonths } from "../constants/config.js";
 import AddIndividualExpense from "../components/AddIndividualExpense.jsx";
-import { getDepartments } from "../apis/departments.js";
 
 export default function IndividualExpenses() {
     const queryClient = useQueryClient();
-    const nPreviousMonths = 2;
     const months = getnPreviousMonth(nPreviousMonths);
     const [chosenMonth, setChosenMonth] = useState(months[0].value);
     const [showIndividualExpense, setShowIndividualExpense] = useState(false);
@@ -45,18 +44,6 @@ export default function IndividualExpenses() {
     };
 
     const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-
-    const {
-        data: departments = [],
-        isLoading: isLoadingDepartments,
-        isError: isErrorDepartments,
-    } = useQuery({
-        queryKey: ["departments"],
-        queryFn: () => getDepartments(),
-    });
-
-
-    console.log(departments);
 
     return (
         <MenuLayout>
