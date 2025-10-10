@@ -32,6 +32,12 @@ Pagos
   - Respuesta: pago creado con id
 
 Auth y usuarios
+- POST /users/login
+  - Body: { email: string, password: string, consortium: string }
+  - Respuesta: { accessToken?: string, user?: { id?, name, role } }
+- POST /users/register
+  - Body: { name: string, email: string, password: string, role: string, consortium: string }
+  - Respuesta: { id?: string|number, name, email, role, consortium }
 - GET /users/me
   - Auth: Bearer token
   - Respuesta: { id, name, email, role }
