@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
+import { usersRouter } from "./src/routes/usersRoute.js";
 
 const app = express();
 app.use(cors());
@@ -19,28 +20,15 @@ dbPromise.then(async (db) => {
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
-      email TEXT,
-      password TEXT
+      email TEXT unique,
+      password TEXT,
+      role TEXT,
+      consortium TEXT
     )
   `);
 });
 
-// Rutas básicas
-app.get("/users", async (req, res) => {
-  const db = await dbPromise;
-  const users = await db.all("SELECT * FROM users");
-  res.json(users);
-});
-
-app.post("/users", async (req, res) => {
-  const { name, email } = req.body;
-  const db = await dbPromise;
-  const result = await db.run(
-    "INSERT INTO users (name, email) VALUES (?, ?)",
-    [name, email]
-  );
-  res.json({ id: result.lastID, name, email });
-});
+app.use("/users", usersRouter);
 
 // Iniciar servidor
 const PORT = 3000;

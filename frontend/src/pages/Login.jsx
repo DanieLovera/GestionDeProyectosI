@@ -11,6 +11,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [consortium, setConsortium] = useState("");
   const API_URL = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
 
@@ -19,7 +20,7 @@ export default function Login() {
     e.preventDefault();
     // mock login: store user in localStorage and navigate
     const user = { name: role === 'Administrador' ? 'Admin Demo' : 'Propietario Demo', role };
-    axios.post(`${API_URL}/users`, { email: email, password: password })
+    axios.post(`${API_URL}/users/login`, { email: email, password: password, consortium: consortium })
       .then(response => {
         localStorage.setItem('gdpi_user', JSON.stringify(user));
         navigate(paths.reports);
@@ -51,7 +52,7 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="login-form">
           {/* Consorcio */}
           <div className="form-group">
-            <input type="text" placeholder="Selecciona tu consorcio" required />
+            <input type="text" value={consortium} onChange={(e) => setConsortium(e.target.value)} placeholder="Selecciona tu consorcio" required />
           </div>
 
           {/* Email */}

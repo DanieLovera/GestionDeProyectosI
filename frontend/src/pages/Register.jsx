@@ -12,11 +12,13 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [role, setRole] = useState("");
+  const [consortium, setConsortium] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const API_URL = import.meta.env.VITE_API_URL;
-    axios.post(`${API_URL}/users`, { name, email, password })
+    axios.post(`${API_URL}/users/register`, { name, email, password, role, consortium })
       .then(response => {
         console.log("Registro exitoso:", response.data);
         alert("Registro exitoso");
@@ -46,7 +48,7 @@ export default function Register() {
 
           {/* Rol */}
           <div className="form-group">
-            <select required>
+            <select required value={role} onChange={(e) => setRole(e.target.value)}>
               <option value="">Rol</option>
               <option value="admin">Administrador</option>
               <option value="inquilino">Inquilino</option>
@@ -56,7 +58,7 @@ export default function Register() {
 
           {/* Consorcio */}
           <div className="form-group">
-            <select required>
+            <select required value={consortium} onChange={(e) => setConsortium(e.target.value)}>
               <option value="">Seleccionar consorcio</option>
               <option value="edificio">Edificio</option>
               <option value="torre">Torre</option>
