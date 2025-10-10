@@ -2,6 +2,7 @@ import MenuLayout from "../components/MenuLayout";
 import InfoCard from "../components/InfoCard";
 import ReportCategoryChart from "../components/ReportCategoryChart";
 import GenericTable from "../components/GenericTable";
+import UnitMovementsModal from "../components/UnitMovementsModal";
 import GenericSelect from "../components/GenericSelect";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -13,6 +14,8 @@ import { exportToCsv } from "../utils/exportToCsv";
 export default function Reports() {
   const months = getnPreviousMonth(nPreviousMonths);
   const [chosenMonth, setChosenMonth] = useState(months[0].value);
+  const [showMovements, setShowMovements] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState(null);
 
   const { data: dashboard } = useQuery({
     queryKey: ["reports-dashboard", chosenMonth],
@@ -43,6 +46,15 @@ export default function Reports() {
       Mora: u.lateFee,
     }));
     exportToCsv(`reporte_unidades_${chosenMonth}.csv`, rows);
+  };
+
+  const openMovements = (row) => {
+    setSelectedUnit({ id: row.id, name: row.name });
+    setShowMovements(true);
+  };
+  const closeMovements = () => {
+    setShowMovements(false);
+    setSelectedUnit(null);
   };
 
   return (
@@ -79,8 +91,19 @@ export default function Reports() {
             { key: "paid", label: "Pagado", formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) },
             { key: "pending", label: "Pendiente", formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) },
             { key: "lateFee", label: "Mora", formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) },
+            { key: "actions", label: "Acciones", formatFn: (_, row) => (
+              <button className="btn btn-link p-0" onClick={() => openMovements(row)}>
+                Ver movimientos
+              </button>
+            ) },
           ]}
           emptyMsg="Sin datos para el período seleccionado."
+        />
+        <UnitMovementsModal
+          show={showMovements}
+          onClose={closeMovements}
+          unit={selectedUnit}
+          month={chosenMonth}
         />
       </div>
     </MenuLayout>
