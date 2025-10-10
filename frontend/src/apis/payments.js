@@ -1,16 +1,12 @@
-import payments from "../mocks/payments";
+import http from "./http";
 
-const mockDataFetch = (data, delay = 600) => new Promise((resolve) => setTimeout(() => resolve(data), delay));
-
+// Expect backend routes like: GET /payments, POST /payments
 export const getPayments = async () => {
-  const response = await mockDataFetch(payments, 500);
-  return response;
+  const { data } = await http.get("/payments");
+  return data;
 };
 
 export const addPayment = async (payment) => {
-  const newPayment = { id: Date.now(), ...payment };
-  // Simular latencia y persistencia en memoria
-  await mockDataFetch(null, 400);
-  payments.push(newPayment);
-  return newPayment;
+  const { data } = await http.post("/payments", payment);
+  return data;
 };
