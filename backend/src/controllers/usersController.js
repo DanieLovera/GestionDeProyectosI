@@ -34,8 +34,8 @@ export const loginUser = async (req, res) => {
     );
 
     return res.status(200).json({
-      message: "Login successful",
-      token: token,
+      accessToken: token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, consortium: user.consortium }
     });
   } catch (err) {
     console.error("Error during login:", err);
