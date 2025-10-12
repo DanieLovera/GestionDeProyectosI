@@ -7,6 +7,9 @@ import { unitsRouter } from "./src/routes/unitsRoute.js";
 import { commonExpensesRouter } from "./src/routes/commonExpensesRoute.js";
 import { paymentsRouter } from "./src/routes/paymentsRoute.js";
 import { individualExpensesRouter } from "./src/routes/individualExpensesRoute.js";
+import { overduesRouter } from "./src/routes/overduesRoute.js";
+import { commissionRouter } from "./src/routes/commissionRoute.js";
+
 
 const app = express();
 app.use(cors());
@@ -79,11 +82,38 @@ dbPromise.then(async (db) => {
   `);
 });
 
+// Tabla de configuración de moras
+dbPromise.then(async (db) => {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS overdues_config (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rate REAL,
+      startDay INTEGER,
+      mode TEXT
+    )
+  `);
+});
+
+// Tabla de configuración de comisión de administración
+dbPromise.then(async (db) => {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS commission_config (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rate REAL,
+      base REAL
+    )
+  `);
+});
+
+
 app.use("/units", unitsRouter);
 app.use("/users", usersRouter);
 app.use("/common-expenses", commonExpensesRouter);
 app.use("/payments", paymentsRouter);
 app.use("/individual-expenses", individualExpensesRouter);
+app.use("/overdues", overduesRouter);
+app.use("/", commissionRouter);
+
 
 // Iniciar servidor
 const PORT = 3000;

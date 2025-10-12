@@ -3,21 +3,17 @@ import sqlite3 from "sqlite3";
 
 export const getCommissionConfig = async (req, res) => {
   try {
-    const db = await open({
-      filename: "./data/database.db",
-      driver: sqlite3.Database,
-    });
-
+    const db = await open({ filename: "./data/database.db", driver: sqlite3.Database });
     const config = await db.get("SELECT * FROM commission_config LIMIT 1");
 
     if (!config) {
-      return res.json({ rate: 0.1, base: 10000 }); // tiene el valor por default
+      return res.json({ rate: 0.1, base: 10000 }); // default
     }
 
     res.json(config);
   } catch (err) {
-    console.error("Error fetching commission config:", err);
-    res.status(500).json({ message: "Error fetching commission config", error: err.message });
+    console.error("Error al obtener configuración de comisión:", err);
+    res.status(500).json({ message: "Error al obtener configuración", error: err.message });
   }
 };
 
@@ -29,36 +25,19 @@ export const updateCommissionConfig = async (req, res) => {
   }
 
   try {
-    const db = await open({
-      filename: "./data/database.db",
-      driver: sqlite3.Database,
-    });
-
-    await db.run(`
-      CREATE TABLE IF NOT EXISTS commission_config (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        rate REAL,
-        base REAL
-      )
-    `);
-
+    const db = await open({ filename: "./data/database.db", driver: sqlite3.Database });
     const existing = await db.get("SELECT * FROM commission_config LIMIT 1");
 
     if (existing) {
-      await db.run(
-        "UPDATE commission_config SET rate = ?, base = ? WHERE id = ?",
-        [rate, base, existing.id]
-      );
+      await db.run("UPDATE commission_config SET rate = ?, base = ? WHERE id = ?",
+        [rate, base, existing.id]);
     } else {
-      await db.run(
-        "INSERT INTO commission_config (rate, base) VALUES (?, ?)",
-        [rate, base]
-      );
+      await db.run("INSERT INTO commission_config (rate, base) VALUES (?, ?)", [rate, base]);
     }
 
     res.json({ rate, base });
   } catch (err) {
-    console.error("Error updating commission config:", err);
-    res.status(500).json({ message: "Error updating commission config", error: err.message });
+    console.error("Error al actualizar configuración de comisión:", err);
+    res.status(500).json({ message: "Error al actualizar configuración", error: err.message });
   }
 };
