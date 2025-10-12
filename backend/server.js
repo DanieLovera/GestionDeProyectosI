@@ -10,6 +10,8 @@ import { individualExpensesRouter } from "./src/routes/individualExpensesRoute.j
 import { overduesRouter } from "./src/routes/overduesRoute.js";
 import { commissionRouter } from "./src/routes/commissionRoute.js";
 import { settingsRouter } from "./src/routes/settingsRoute.js";
+import { reportsRouter } from "./src/routes/reportsRoute.js";
+
 
 
 
@@ -116,6 +118,7 @@ app.use("/individual-expenses", individualExpensesRouter);
 app.use("/overdues", overduesRouter);
 app.use("/", commissionRouter);
 app.use("/", settingsRouter);
+app.use("/reports", reportsRouter);
 
 
 
