@@ -1,5 +1,5 @@
 import { getDb } from "../db.js";
-import { Parser } from "json2csv"; 
+import { Parser } from "@json2csv/plainjs"; 
 
 export const getDashboardReport = async (req, res) => {
   const { month, year } = req.query;
@@ -85,11 +85,11 @@ export const getByUnitReport = async (req, res) => {
         id: u.id,
         name: u.name,
         surface: u.surface,
-        participationPct: participationPct.toFixed(2),
-        amount: amount.toFixed(2),
-        paid: paid.toFixed(2),
-        pending: pending.toFixed(2),
-        lateFee: lateFee.toFixed(2)
+        participationPct: participationPct ? participationPct.toFixed(2) : "0.00",
+        amount: amount ? amount.toFixed(2) : "0.00",
+        paid: paid ? paid.toFixed(2) : "0.00",
+        pending: pending ? pending.toFixed(2) : "0.00",
+        lateFee: lateFee ? lateFee.toFixed(2) : "0.00"
       });
     }
 

@@ -4,5 +4,5 @@ import { verifyToken } from "../middlewares/auth.js";
 
 export const commissionRouter = Router();
 
-commissionRouter.get("/config/commission", verifyToken, getCommissionConfig);
-commissionRouter.put("/config/commission", verifyToken, updateCommissionConfig);
+commissionRouter.get("/", verifyToken, getCommissionConfig);
+commissionRouter.put("/", verifyToken, updateCommissionConfig);

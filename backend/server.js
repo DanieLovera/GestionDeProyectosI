@@ -116,7 +116,7 @@ app.use("/common-expenses", commonExpensesRouter);
 app.use("/payments", paymentsRouter);
 app.use("/individual-expenses", individualExpensesRouter);
 app.use("/overdues", overduesRouter);
-app.use("/", commissionRouter);
+app.use("/config/commission", commissionRouter);
 app.use("/", settingsRouter);
 app.use("/reports", reportsRouter);
 
