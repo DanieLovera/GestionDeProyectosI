@@ -8,4 +8,7 @@
 6. npm install react-icons
 7. npm run dev 
 tener el docker desktop abierto y
-hacer docker compose up --build 
+hacer docker compose up --build
+
+docker compose up -d
+docker compose down
