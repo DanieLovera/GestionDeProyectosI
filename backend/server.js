@@ -9,6 +9,8 @@ import { paymentsRouter } from "./src/routes/paymentsRoute.js";
 import { individualExpensesRouter } from "./src/routes/individualExpensesRoute.js";
 import { overduesRouter } from "./src/routes/overduesRoute.js";
 import { commissionRouter } from "./src/routes/commissionRoute.js";
+import { settingsRouter } from "./src/routes/settingsRoute.js";
+
 
 
 const app = express();
@@ -113,6 +115,8 @@ app.use("/payments", paymentsRouter);
 app.use("/individual-expenses", individualExpensesRouter);
 app.use("/overdues", overduesRouter);
 app.use("/", commissionRouter);
+app.use("/", settingsRouter);
+
 
 
 // Iniciar servidor
