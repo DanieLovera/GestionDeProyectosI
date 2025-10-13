@@ -1,7 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
 function getAuthHeader() {
-  const token = localStorage.getItem("token"); // o sessionStorage
+  const token = localStorage.getItem("token"); 
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -29,6 +29,41 @@ export async function apiPost(path, body) {
       ...getAuthHeader(),
     },
     body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function apiPut(path, body) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function apiDelete(path) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
   });
 
   if (!res.ok) {
