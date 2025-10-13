@@ -24,7 +24,7 @@ const handleSubmit = async (e) => {
       consortium,
     });
 
-    localStorage.setItem("gdpi_token", response.accessToken);
+    localStorage.setItem("token", response.accessToken); 
     localStorage.setItem("gdpi_user", JSON.stringify(response.user));
 
     console.log("Inicio de sesión exitoso:", response);
