@@ -1,26 +1,9 @@
-import individualExpenses from "../mocks/individualExpenses.js";
-import departments from "../mocks/units.js";
+import { apiGet, apiPost } from "./client.js";
 
-const mockDataFetch = (data, delay) => new Promise((resolve) => setTimeout(() => resolve(data), delay));
-
-const getIndividualExpenses = async () => {
-    const response = await mockDataFetch(individualExpenses, 1000);
-    return response;
+export const getIndividualExpenses = async () => {
+  return await apiGet("/individual-expenses");
 };
 
-const addIndividualExpense = async (expense) => {
-    const response = await mockDataFetch({ ...expense, id: Date.now() }, 1000);
-    // Simulate returning the unit name instead of unitId
-    response.unit = departments.find((dept) => dept.id === expense.unitId).name;
-    // Simulate adding to DB by pushing to the mock array
-    individualExpenses.push({
-        id: response.id,
-        unit: response.unit,
-        description: response.description,
-        amount: response.amount,
-        date: response.date,
-    });
-    return response;
+export const addIndividualExpense = async (expense) => {
+  return await apiPost("/individual-expenses", expense);
 };
-
-export { getIndividualExpenses, addIndividualExpense };
