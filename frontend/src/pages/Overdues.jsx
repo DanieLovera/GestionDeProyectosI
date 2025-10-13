@@ -1,14 +1,49 @@
 import MenuLayout from "../components/MenuLayout";
 import GenericTable from "../components/GenericTable";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import overduesMock from "../mocks/overdues";
-import paymentsMock from '../mocks/payments';
-import { loadMoraConfig, saveMoraConfig } from '../constants/moraConfig';
+import paymentsMock from "../mocks/payments";
+import { apiGet, apiPost } from "../apis/client"; 
 
 export default function Overdues() {
   const [overdues, setOverdues] = useState(overduesMock);
+  const [config, setConfig] = useState({ dailyRate: 0.05, startAfterDays: 10 });
+  const [loading, setLoading] = useState(true);
 
-  const [config, setConfig] = useState(() => loadMoraConfig());
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const data = await apiGet("/overdues/config");
+        
+        setConfig({
+          dailyRate: data.rate ?? 0.05,
+          startAfterDays: data.startDay ?? 10,
+          mode: data.mode ?? "simple",
+        });
+      } catch (err) {
+        console.error("Error al obtener configuración:", err);
+        alert("Error al cargar configuración de mora");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  const handleUpdateConfig = async (patch) => {
+    const next = { ...config, ...patch };
+    setConfig(next);
+    try {
+      await apiPost("/overdues/config?_method=PUT", {
+        rate: next.dailyRate,
+        startDay: next.startAfterDays,
+        mode: next.mode ?? "simple",
+      });
+    } catch (err) {
+      console.error("Error al guardar configuración:", err);
+      alert("Error al guardar configuración de mora");
+    }
+  };
 
   const today = new Date();
 
@@ -17,19 +52,16 @@ export default function Overdues() {
       const due = new Date(o.dueDate);
       const diffMs = today - due;
       const rawDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-      // sum of payments made by the unit up to today
+
       const paid = paymentsMock
         .filter((p) => p.unit === o.unit)
         .reduce((s, p) => s + (p.amount || 0), 0);
 
-      // remaining principal to compute mora
       const principalOutstanding = Math.max(0, o.originalAmount - paid);
-
-      // mora only starts after grace period (startAfterDays)
       const daysOverdue = Math.max(0, rawDays - (config.startAfterDays || 0));
-
       const interest = Math.round(principalOutstanding * (config.dailyRate || 0) * daysOverdue);
       const totalWithMora = principalOutstanding + interest;
+
       return {
         id: o.id,
         unit: o.unit,
@@ -44,15 +76,9 @@ export default function Overdues() {
     });
   }, [overdues, today, config]);
 
-  const handleMarkPaid = (id) => {
-    setOverdues((prev) => prev.filter((o) => o.id !== id));
-  };
+  const handleMarkPaid = (id) => setOverdues((prev) => prev.filter((o) => o.id !== id));
 
-  const handleUpdateConfig = (patch) => {
-    const next = { ...config, ...patch };
-    setConfig(next);
-    saveMoraConfig(next);
-  };
+  if (loading) return <MenuLayout><p>Cargando configuración...</p></MenuLayout>;
 
   return (
     <MenuLayout>
@@ -77,7 +103,9 @@ export default function Overdues() {
             className="form-control form-control-sm"
             style={{ width: 80 }}
             value={config.startAfterDays}
-            onChange={(e) => handleUpdateConfig({ startAfterDays: parseInt(e.target.value || '0') })}
+            onChange={(e) =>
+              handleUpdateConfig({ startAfterDays: parseInt(e.target.value || "0") })
+            }
           />
         </div>
 
@@ -92,34 +120,44 @@ export default function Overdues() {
               {
                 key: "originalAmount",
                 label: "Monto original",
-                formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }),
+                formatFn: (v) =>
+                  v.toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
               },
               {
                 key: "paid",
                 label: "Pagado",
-                formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }),
+                formatFn: (v) =>
+                  v.toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
               },
               {
                 key: "principalOutstanding",
                 label: "Saldo impago",
-                formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }),
+                formatFn: (v) =>
+                  v.toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
               },
               { key: "daysOverdue", label: "Días vencidos" },
               {
                 key: "interest",
                 label: "Interés (mora)",
-                formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }),
+                formatFn: (v) =>
+                  v.toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
               },
               {
                 key: "totalWithMora",
                 label: "Total con mora",
-                formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }),
+                formatFn: (v) =>
+                  v.toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
               },
               {
                 key: "actions",
                 label: "Acciones",
                 formatFn: (_, row) => (
-                  <button className="btn btn-sm btn-success" onClick={() => handleMarkPaid(row.id)}>Marcar como pagado</button>
+                  <button
+                    className="btn btn-sm btn-success"
+                    onClick={() => handleMarkPaid(row.id)}
+                  >
+                    Marcar como pagado
+                  </button>
                 ),
               },
             ]}
@@ -130,3 +168,4 @@ export default function Overdues() {
     </MenuLayout>
   );
 }
+
