@@ -105,12 +105,6 @@ export default function Register() {
             </span>
           </div>
 
-          {/* Términos */}
-          <div className="form-terms">
-            <input type="checkbox" required />
-            <span>Acepto los términos y condiciones</span>
-          </div>
-
           {/* Botón */}
           <button type="submit" className="btn-register">
             Registrarme
