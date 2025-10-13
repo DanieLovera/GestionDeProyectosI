@@ -24,7 +24,6 @@ const handleSubmit = async (e) => {
       consortium,
     });
 
-    // Guardamos token y usuario real en localStorage
     localStorage.setItem("gdpi_token", response.accessToken);
     localStorage.setItem("gdpi_user", JSON.stringify(response.user));
 
