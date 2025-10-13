@@ -1,36 +1,17 @@
-// Simple commission config service using localStorage
+import * as api from "../apis/commission";
 
-const STORAGE_KEY = "gdpi_commission";
-
-export function getCommissionConfig() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { rate: 0, base: 0 };
-    const parsed = JSON.parse(raw);
-    return {
-      rate: Number(parsed.rate) || 0,
-      base: Number(parsed.base) || 0,
-    };
-  } catch (_) {
-    return { rate: 0, base: 0 };
-  }
+export async function getCommissionConfig() {
+  return api.getCommissionConfig();
 }
 
-export function setCommissionConfig({ rate, base }) {
-  const payload = {
-    rate: Number(rate) || 0,
-    base: Number(base) || 0,
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  return payload;
+export async function setCommissionConfig(config) {
+  return api.updateCommissionConfig(config);
 }
 
-export function getCommissionForMonth(month) {
-  const { rate, base } = getCommissionConfig();
-  if (!rate || !base) return null;
+export function getCommissionForMonth(month, config) {
+  if (!config?.rate || !config?.base) return null;
   const mm = month.toString().padStart(2, "0");
-  const amount = Math.round(base * rate);
-  // We only need month filtering elsewhere; year is not strictly used in filters
+  const amount = Math.round(config.base * config.rate);
   const date = `2025-${mm}-28`;
   return {
     id: `commission-${mm}`,
@@ -40,3 +21,4 @@ export function getCommissionForMonth(month) {
     __isCommission: true,
   };
 }
+

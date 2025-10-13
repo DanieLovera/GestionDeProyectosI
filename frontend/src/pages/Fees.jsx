@@ -9,14 +9,28 @@ import GenericSelect from "../components/GenericSelect";
 
 export default function Fees() {
   const [fees, setFees] = useState(feesMock);
-  const [config, setConfig] = useState(() => getCommissionConfig());
+  const [config, setConfig] = useState({ rate: 0, base: 0 });
+  const [loading, setLoading] = useState(true);
   const months = getnPreviousMonth(nPreviousMonths);
   const [chosenMonth, setChosenMonth] = useState(months[0].value);
 
+  // Cargar configuración inicial desde el backend
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await getCommissionConfig();
+        setConfig(data);
+      } catch (err) {
+        console.error("Error al cargar config:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
   const rows = useMemo(() => {
-    // Keep existing mock table for historical entries
+    const rate = Number(config.rate) || 0;
     return fees.map((f) => {
-      const rate = Number(config.rate) || 0;
       const commission = Math.round(f.baseAmount * rate);
       return {
         id: f.id,
@@ -28,15 +42,33 @@ export default function Fees() {
     });
   }, [fees, config]);
 
-  // Live preview commission for selected month
-  const previewCommission = useMemo(() => getCommissionForMonth(chosenMonth), [chosenMonth, config]);
-
-  useEffect(() => {
-    // Ensure config is persisted on mount (no-op if already saved)
-    setCommissionConfig(config);
-  }, []);
+  const previewCommission = useMemo(
+    () => getCommissionForMonth(chosenMonth, config),
+    [chosenMonth, config]
+  );
 
   const markPaid = (id) => setFees((prev) => prev.filter((f) => f.id !== id));
+
+  const handleSave = async () => {
+    try {
+      const updated = await setCommissionConfig(config);
+      setConfig(updated);
+      alert("Configuración guardada correctamente ✅");
+    } catch (err) {
+      console.error("Error guardando config:", err);
+      alert("Error al guardar configuración.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <MenuLayout>
+        <div className="p-3">
+          <p>Cargando configuración de comisión...</p>
+        </div>
+      </MenuLayout>
+    );
+  }
 
   return (
     <MenuLayout>
@@ -59,7 +91,9 @@ export default function Fees() {
                   max={100}
                   step={0.1}
                   value={config.rate * 100}
-                  onChange={(e) => setConfig((c) => ({ ...c, rate: Number(e.target.value) / 100 }))}
+                  onChange={(e) =>
+                    setConfig((c) => ({ ...c, rate: Number(e.target.value) / 100 }))
+                  }
                 />
               </div>
               <div className="col-12 col-md-4">
@@ -70,21 +104,14 @@ export default function Fees() {
                   min={0}
                   step={100}
                   value={config.base}
-                  onChange={(e) => setConfig((c) => ({ ...c, base: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setConfig((c) => ({ ...c, base: Number(e.target.value) }))
+                  }
                 />
               </div>
               <div className="col-12 col-md-4 d-flex gap-2">
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setCommissionConfig(config)}
-                >
+                <button className="btn btn-primary" onClick={handleSave}>
                   Guardar configuración
-                </button>
-                <button
-                  className="btn btn-outline-secondary"
-                  onClick={() => setConfig(getCommissionConfig())}
-                >
-                  Restablecer
                 </button>
               </div>
             </div>
@@ -95,10 +122,16 @@ export default function Fees() {
           <h6 className="mb-1">Previsualización para el mes seleccionado</h6>
           {previewCommission ? (
             <div className="alert alert-info mb-0">
-              {previewCommission.description}: {previewCommission.amount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+              {previewCommission.description}:{" "}
+              {previewCommission.amount.toLocaleString("es-AR", {
+                style: "currency",
+                currency: "ARS",
+              })}
             </div>
           ) : (
-            <div className="alert alert-warning mb-0">Configura tasa y base para generar la comisión.</div>
+            <div className="alert alert-warning mb-0">
+              Configura tasa y base para generar la comisión.
+            </div>
           )}
         </div>
 
@@ -113,18 +146,25 @@ export default function Fees() {
               {
                 key: "baseAmount",
                 label: "Base",
-                formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }),
+                formatFn: (v) =>
+                  v.toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
               },
               {
                 key: "commission",
                 label: "Comisión",
-                formatFn: (v) => v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }),
+                formatFn: (v) =>
+                  v.toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
               },
               {
                 key: "actions",
                 label: "Acciones",
                 formatFn: (_, row) => (
-                  <button className="btn btn-sm btn-success" onClick={() => markPaid(row.id)}>Marcar como pagado</button>
+                  <button
+                    className="btn btn-sm btn-success"
+                    onClick={() => markPaid(row.id)}
+                  >
+                    Marcar como pagado
+                  </button>
                 ),
               },
             ]}
