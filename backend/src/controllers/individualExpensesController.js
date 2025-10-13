@@ -5,19 +5,24 @@ export const getIndividualExpenses = async (req, res) => {
   try {
     const db = await getDb();
 
-    let query = "SELECT * FROM individual_expenses WHERE 1=1";
+    let query = `
+      SELECT ie.*, u.name AS unit
+      FROM individual_expenses ie
+      JOIN units u ON ie.unit_id = u.id
+      WHERE 1=1
+    `;
     const params = [];
 
     if (unitId) {
-      query += " AND unit_id = ?";
+      query += " AND ie.unit_id = ?";
       params.push(unitId);
     }
     if (from) {
-      query += " AND date >= ?";
+      query += " AND ie.date >= ?";
       params.push(from);
     }
     if (to) {
-      query += " AND date <= ?";
+      query += " AND ie.date <= ?";
       params.push(to);
     }
 
@@ -31,6 +36,7 @@ export const getIndividualExpenses = async (req, res) => {
       .json({ message: "Error fetching individual expenses", error: err.message });
   }
 };
+
 
 export const createIndividualExpense = async (req, res) => {
   const { unitId, description, amount, date } = req.body;

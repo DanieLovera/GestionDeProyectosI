@@ -6,26 +6,24 @@ import { FaCalendarAlt, FaDollarSign } from "react-icons/fa";
 import DatePicker from "react-datepicker";
 import { es } from "date-fns/locale";
 import { NumericFormat } from "react-number-format";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 
 import "./AddIndividualExpense.css";
 import GenericSelect from "./GenericSelect";
-import { getDepartments } from "../apis/departments.js";
+import { getUnits } from "../apis/units.js";
 import { useQuery } from "@tanstack/react-query";
-import { startOfMonth, endOfMonth } from "date-fns";
 
 export default function AddIndividualExpense({ show, onSave, onClose }) {
-    const { data: departments = [] } = useQuery({
-        queryKey: ["departments"],
-        queryFn: () => getDepartments(),
+    // 🔹 Carga de unidades reales desde el backend
+    const { data: units = [] } = useQuery({
+        queryKey: ["units"],
+        queryFn: () => getUnits(),
     });
 
-    const departmentOptions = departments.map((department) => {
-        return {
-            label: department.name,
-            value: department.id,
-        };
-    });
+    const unitOptions = units.map((unit) => ({
+        label: unit.name,
+        value: unit.id,
+    }));
 
     const [data, setData] = useState({
         unitId: "",
@@ -33,6 +31,7 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
         amount: "",
         date: "",
     });
+
     const [error, setError] = useState({});
     const [isProcessing, setIsProcessing] = useState(false);
 
@@ -60,7 +59,7 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
         setData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleDepartmentChange = (value) => {
+    const handleUnitChange = (value) => {
         setData((prev) => ({ ...prev, unitId: value }));
     };
 
@@ -78,9 +77,8 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
                     date: format(data.date, "yyyy-MM-dd"),
                 });
                 clearState();
-            } catch {
-                // Handle error if needed
-                console.error("Error saving expense");
+            } catch (error) {
+                console.error("Error al guardar el gasto:", error);
             } finally {
                 setIsProcessing(false);
             }
@@ -111,8 +109,8 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
                         <GenericSelect
                             label="Unidad"
                             value={data.unitId}
-                            setValue={handleDepartmentChange}
-                            options={departmentOptions}
+                            setValue={handleUnitChange}
+                            options={unitOptions}
                             required={true}
                             showEmptyOption={true}
                             errorMessage={error.unitId}
@@ -136,7 +134,7 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
                         </Form.Group>
 
                         <Form.Group className="mb-3">
-                            <Form.Label htmlFor="description">
+                            <Form.Label htmlFor="amount">
                                 Monto <span className="text-danger">*</span>
                             </Form.Label>
                             <InputGroup>
