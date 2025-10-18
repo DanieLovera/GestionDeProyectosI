@@ -1,6 +1,6 @@
 import "react-datepicker/dist/react-datepicker.css";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Button, Form, InputGroup, Spinner } from "react-bootstrap";
 import DatePicker from "react-datepicker";
 import { es } from "date-fns/locale";
@@ -8,14 +8,28 @@ import { NumericFormat } from "react-number-format";
 import { format } from "date-fns";
 
 export default function RegisterPaymentModal({ show, onSave, onClose, unitOptions = [], defaultUnitId, pendingByUnit = {} }) {
-  const [data, setData] = useState({ unitId: defaultUnitId || "", amount: "", date: "", method: "transferencia" });
+  // inicializar/actualizar datos cuando se abre el modal o cambia el defaultUnitId
+  const [data, setData] = useState({ unitId: defaultUnitId || "", amount: "", date: null, method: "transferencia" });
   const [error, setError] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
 
   const clear = () => {
-    setData({ unitId: defaultUnitId || "", amount: "", date: "", method: "transferencia" });
+    setData({ unitId: defaultUnitId || "", amount: "", date: null, method: "transferencia" });
     setError({});
   };
+
+  useEffect(() => {
+    if (show) {
+      // cuando se abra el modal, setear valores iniciales (unitId puede cambiar entre aperturas)
+      setData((p) => ({
+        unitId: defaultUnitId || "",
+        amount: "",
+        date: new Date(),
+        method: p.method || "transferencia",
+      }));
+      setError({});
+    }
+  }, [show, defaultUnitId]);
 
   const validate = () => {
     const e = {};
@@ -41,7 +55,16 @@ export default function RegisterPaymentModal({ show, onSave, onClose, unitOption
     if (!validate()) return;
     try {
       setIsProcessing(true);
-      await onSave({ ...data, date: format(data.date, "yyyy-MM-dd") });
+      // enviar amount como número (fallback a 0 si no es válido)
+      // incluir ambas claves unitId y unit_id para compatibilidad con backend/frontend
+      const payload = {
+        ...data,
+        date: format(data.date, "yyyy-MM-dd"),
+        amount: Number(data.amount) || 0,
+        unitId: data.unitId || data.unit_id || "",
+        unit_id: data.unitId || data.unit_id || ""
+      };
+      await onSave(payload);
       clear();
     } finally {
       setIsProcessing(false);

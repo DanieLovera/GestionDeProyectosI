@@ -51,20 +51,29 @@ export default function Reports() {
     const isLoading = isLoadingCommonExpenses || isLoadingDepartments || isLoadingPayments;
     const isError = isErrorCommonExpenses || isErrorDepartments || isErrorPayments;
 
+    // normalización: si backend devuelve unit_id, mapear a unitId para uso en la UI
+    const normalizedPayments = (payments || []).map((p) => ({
+        ...p,
+        unitId: p.unitId ?? p.unit_id ?? p.unit ?? p.unitId,
+        unit_id: p.unit_id ?? p.unitId ?? p.unit ?? p.unit_id,
+    }));
+
     const totalCommonExpenses = commonExpenses.reduce((s, e) => s + (e.amount || 0), 0);
     const totalSurface = departments.reduce((s, u) => s + (u.surface || 0), 0);
     const paidByUnit = useMemo(() => {
         const map = {};
-        payments.forEach((p) => {
-            map[p.unitId] = (map[p.unitId] || 0) + (p.amount || 0);
+        normalizedPayments.forEach((p) => {
+            const key = String(p.unitId ?? p.unit_id ?? p.unit ?? "");
+            map[key] = (map[key] || 0) + (p.amount || 0);
         });
         return map;
-    }, [payments]);
+    }, [normalizedPayments]);
 
     const distribution = departments.map((u) => {
         const pct = totalSurface > 0 ? u.surface / totalSurface : 0;
         const amountToPay = Math.round(totalCommonExpenses * pct);
-        const paid = paidByUnit[u.id] || 0;
+        // comparar por id como string para evitar desajustes de tipo
+        const paid = paidByUnit[String(u.id)] || paidByUnit[u.id] || 0;
         const pending = Math.max(0, amountToPay - paid);
         return {
             id: u.id,
@@ -87,11 +96,48 @@ export default function Reports() {
         return map;
     }, [distribution]);
 
+    // mutación con actualización optimista de cache para payments del mes seleccionado
     const addPaymentMutation = useMutation({
         mutationFn: (payload) => addPaymentService(payload),
-        onSuccess: () => {
+        // optimista: añadir pago temporal a la cache (incluir unitId y unit_id)
+        onMutate: async (payload) => {
+            await queryClient.cancelQueries(["payments", chosenMonth]);
+            const previous = queryClient.getQueryData(["payments", chosenMonth]) || [];
+            const optimistic = {
+                id: `temp-${Date.now()}`,
+                ...payload,
+                unitId: payload.unitId ?? payload.unit_id ?? payload.unit,
+                unit_id: payload.unit_id ?? payload.unitId ?? payload.unit,
+            };
+            queryClient.setQueryData(["payments", chosenMonth], [...previous, optimistic]);
+            return { previous, optimisticId: optimistic.id };
+        },
+        onError: (err, payload, context) => {
+            // rollback
+            if (context?.previous) {
+                queryClient.setQueryData(["payments", chosenMonth], context.previous);
+            }
+            console.error("Error adding payment:", err);
+            alert("No se pudo registrar el pago");
+        },
+        onSuccess: (saved, payload, context) => {
+            const current = queryClient.getQueryData(["payments", chosenMonth]) || [];
+            const optimisticId = context?.optimisticId;
+            // normalizar saved (si backend devuelve unit_id)
+            const normalizedSaved = saved
+                ? { ...saved, unitId: saved.unitId ?? saved.unit_id ?? saved.unit, unit_id: saved.unit_id ?? saved.unitId ?? saved.unit }
+                : null;
+            let updated;
+            if (normalizedSaved && (normalizedSaved.id || normalizedSaved.amount)) {
+                updated = current.map((p) => (p.id === optimisticId ? normalizedSaved : p));
+            } else {
+                updated = current.map((p) => (p.id === optimisticId ? ({ id: `local-${Date.now()}`, ...payload, unitId: payload.unitId ?? payload.unit_id, unit_id: payload.unit_id ?? payload.unitId }) : p));
+            }
+            queryClient.setQueryData(["payments", chosenMonth], updated);
             queryClient.invalidateQueries(["payments", chosenMonth]);
-            setShowPayment(false);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries(["payments", chosenMonth]);
         },
     });
 
@@ -101,16 +147,35 @@ export default function Reports() {
     };
 
     const handleSavePayment = async (payment) => {
-        const saved = await addPaymentMutation.mutateAsync(payment);
-        const unitName = departments.find((d) => d.id === saved.unitId)?.name || saved.unitId;
-        setReceiptData({
-            number: saved.id,
-            date: saved.date,
-            unitName,
-            amount: saved.amount,
-            method: saved.method,
-        });
-        setShowReceipt(true);
+        // asegurar que amount sea number y que payload contenga unitId y unit_id
+        const payload = {
+            ...payment,
+            amount: Number(payment.amount) || 0,
+            unitId: payment.unitId ?? payment.unit_id ?? payment.unit,
+            unit_id: payment.unit_id ?? payment.unitId ?? payment.unit,
+        };
+        try {
+            const saved = await addPaymentMutation.mutateAsync(payload);
+            const result = saved && (saved.id || saved.amount || saved.unit_id) ? ( { ...saved, unitId: saved.unitId ?? saved.unit_id } ) : {
+                id: `local-${Date.now()}`,
+                date: payload.date,
+                unitId: payload.unitId,
+                amount: payload.amount,
+                method: payload.method,
+            };
+            const unitName = departments.find((d) => String(d.id) === String(result.unitId))?.name || result.unitId;
+            setReceiptData({
+                number: result.id,
+                date: result.date,
+                unitName,
+                amount: result.amount,
+                method: result.method,
+            });
+            setShowReceipt(true);
+            setShowPayment(false);
+        } catch (err) {
+            // onError del useMutation ya maneja rollback y aviso
+        }
     };
 
     return (
