@@ -13,7 +13,8 @@ services:
     environment:
       - NODE_ENV=development
       - JWT_SECRET=gestion
-
+      - SEED_DB=false    # Cambiar a "true" para insertar datos de ejemplo al iniciar
+      - SEED_FORCE=false # Opcional: si true, forzaría re-seed (este ejemplo solo hace seed si tablas vacías)
   frontend:
     build: ./frontend
     container_name: frontend
