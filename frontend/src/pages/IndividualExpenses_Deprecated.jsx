@@ -1,18 +1,35 @@
 import MenuLayout from "../components/MenuLayout";
 import GenericTable from "../components/GenericTable";
-import { useState, useMemo } from "react";
-import individualExpensesMock from "../mocks/individualExpenses";
+import { useState, useMemo, useEffect } from "react";
 import { parseISO, format } from "date-fns";
 import { es } from "date-fns/locale";
+import { getIndividualExpenses, deleteIndividualExpense } from "../apis/individualExpenses";
 
 export default function IndividualExpenses() {
-    const [expenses, setExpenses] = useState(individualExpensesMock);
+    const [expenses, setExpenses] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetch = async () => {
+        setLoading(true);
+        try {
+          const data = await getIndividualExpenses();
+          setExpenses(data || []);
+        } catch (err) {
+          console.error("Error fetching individual expenses:", err);
+          alert("Error al cargar gastos particulares");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetch();
+    }, []);
 
     const rows = useMemo(
         () =>
             expenses.map((e) => ({
                 id: e.id,
-                unit: e.unit,
+                unit: e.unit || e.unitId,
                 description: e.description,
                 amount: e.amount,
                 date: e.date,
@@ -20,7 +37,17 @@ export default function IndividualExpenses() {
         [expenses]
     );
 
-    const markPaid = (id) => setExpenses((prev) => prev.filter((e) => e.id !== id));
+    const markPaid = async (id) => {
+      try {
+        await deleteIndividualExpense(id);
+        setExpenses((prev) => prev.filter((e) => e.id !== id));
+      } catch (err) {
+        console.error("Error marking individual expense paid:", err);
+        alert("No se pudo marcar como pagado");
+      }
+    };
+
+    if (loading) return <MenuLayout><p>Cargando gastos particulares...</p></MenuLayout>;
 
     return (
         <MenuLayout>
