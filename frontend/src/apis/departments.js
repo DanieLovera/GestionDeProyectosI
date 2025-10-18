@@ -1,10 +1,7 @@
-import units from "../mocks/units";
-
-const mockDataFetch = (data, delay) => new Promise((resolve) => setTimeout(() => resolve(data), delay));
+import { apiGet } from "./client.js";
 
 const getDepartments = async () => {
-    const response = await mockDataFetch(units, 1000);
-    return response;
+  return await apiGet("/units");
 };
 
 export { getDepartments };
