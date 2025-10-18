@@ -1,24 +1,24 @@
 import MenuLayout from "../components/MenuLayout";
 import GenericTable from "../components/GenericTable";
 import { useState, useMemo, useEffect } from "react";
-import overduesMock from "../mocks/overdues";
-import paymentsMock from "../mocks/payments";
-import { apiGet, apiPost } from "../apis/client"; 
+import { apiGet, apiPut } from "../apis/client";
+import { getPayments, addPayment } from "../apis/payments";
 
 export default function Overdues() {
-  const [overdues, setOverdues] = useState(overduesMock);
+  const [overdues, setOverdues] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [config, setConfig] = useState({ dailyRate: 0.05, startAfterDays: 10 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchConfig = async () => {
+    const fetch = async () => {
+      setLoading(true);
       try {
-        const data = await apiGet("/overdues/config");
-        
+        const cfg = await apiGet("/overdues/config");
         setConfig({
-          dailyRate: data.rate ?? 0.05,
-          startAfterDays: data.startDay ?? 10,
-          mode: data.mode ?? "simple",
+          dailyRate: cfg.rate ?? 0.05,
+          startAfterDays: cfg.startDay ?? 10,
+          mode: cfg.mode ?? "simple",
         });
       } catch (err) {
         console.error("Error al obtener configuración:", err);
@@ -27,14 +27,28 @@ export default function Overdues() {
         setLoading(false);
       }
     };
-    fetchConfig();
+    fetch();
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [ods, pays] = await Promise.all([apiGet("/overdues").catch(() => []), getPayments()]);
+        setOverdues(ods || []);
+        setPayments(pays || []);
+      } catch (err) {
+        console.error("Error fetching overdues/payments:", err);
+        alert("Error al cargar moras o pagos");
+      }
+    };
+    fetchData();
   }, []);
 
   const handleUpdateConfig = async (patch) => {
     const next = { ...config, ...patch };
     setConfig(next);
     try {
-      await apiPost("/overdues/config?_method=PUT", {
+      await apiPut("/overdues/config", {
         rate: next.dailyRate,
         startDay: next.startAfterDays,
         mode: next.mode ?? "simple",
@@ -49,24 +63,25 @@ export default function Overdues() {
 
   const rows = useMemo(() => {
     return overdues.map((o) => {
-      const due = new Date(o.dueDate);
+      const due = new Date(o.dueDate || o.date || o.due || new Date());
       const diffMs = today - due;
       const rawDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 
-      const paid = paymentsMock
-        .filter((p) => p.unit === o.unit)
+      const paid = payments
+        .filter((p) => (p.unitId || p.unit) === (o.unitId || o.unit))
         .reduce((s, p) => s + (p.amount || 0), 0);
 
-      const principalOutstanding = Math.max(0, o.originalAmount - paid);
+      const originalAmount = o.originalAmount ?? o.base ?? o.amount ?? 0;
+      const principalOutstanding = Math.max(0, originalAmount - paid);
       const daysOverdue = Math.max(0, rawDays - (config.startAfterDays || 0));
       const interest = Math.round(principalOutstanding * (config.dailyRate || 0) * daysOverdue);
       const totalWithMora = principalOutstanding + interest;
 
       return {
         id: o.id,
-        unit: o.unit,
-        dueDate: o.dueDate,
-        originalAmount: o.originalAmount,
+        unit: o.unit || o.unitId,
+        dueDate: o.dueDate || o.date || o.due,
+        originalAmount,
         paid,
         principalOutstanding,
         daysOverdue,
@@ -74,9 +89,25 @@ export default function Overdues() {
         totalWithMora,
       };
     });
-  }, [overdues, today, config]);
+  }, [overdues, payments, today, config]);
 
-  const handleMarkPaid = (id) => setOverdues((prev) => prev.filter((o) => o.id !== id));
+  const handleMarkPaid = async (id) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    try {
+      await addPayment({
+        unitId: row.unit,
+        amount: row.totalWithMora,
+        date: new Date().toISOString().slice(0, 10),
+        method: "manual",
+      });
+      setOverdues((prev) => prev.filter((o) => o.id !== id));
+      setPayments((prev) => [...prev, { id: Date.now(), unitId: row.unit, amount: row.totalWithMora, date: new Date().toISOString().slice(0,10), method: "manual" }]);
+    } catch (err) {
+      console.error("Error marking paid:", err);
+      alert("No se pudo marcar como pagado");
+    }
+  };
 
   if (loading) return <MenuLayout><p>Cargando configuración...</p></MenuLayout>;
 
