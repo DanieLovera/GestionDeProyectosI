@@ -198,6 +198,42 @@ dbPromise.then(async (db) => {
   console.error("Error inicializando la base de datos:", err);
 });
 
+// nuevo endpoint ligero para asegurar que marcar pago elimina la mora asociada
+app.post("/payments", async (req, res) => {
+  try {
+    const { unitId, unit_id, amount, date, method, overdueId } = req.body;
+    const uidRaw = unitId ?? unit_id ?? null;
+    if (!uidRaw || amount == null) {
+      return res.status(400).json({ message: "unitId and amount are required" });
+    }
+
+    const db = await dbPromise;
+    const unitIdNormalized = Number(uidRaw) || null;
+
+    // insertar pago
+    const r = await db.run(
+      "INSERT INTO payments (unit_id, amount, date, method) VALUES (?, ?, ?, ?)",
+      [unitIdNormalized, amount, date || new Date().toISOString().slice(0,10), method || "manual"]
+    );
+
+    const insertedId = r.lastID;
+    // si se pasó overdueId, eliminar esa fila de overdues para que no reaparezca
+    if (overdueId) {
+      try {
+        await db.run("DELETE FROM overdues WHERE id = ?", [overdueId]);
+      } catch (e) {
+        console.warn("No se pudo eliminar overdue:", e?.message || e);
+      }
+    }
+
+    const saved = await db.get("SELECT * FROM payments WHERE id = ?", [insertedId]);
+    return res.json(saved);
+  } catch (err) {
+    console.error("Error en POST /payments:", err);
+    return res.status(500).json({ message: "Error creando pago", error: err?.message || String(err) });
+  }
+});
+
 // Registrar rutas (asegurar que esto ocurra independientemente del seed)
 app.use("/units", unitsRouter);
 app.use("/users", usersRouter);

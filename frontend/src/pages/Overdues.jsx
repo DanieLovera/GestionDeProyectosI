@@ -3,11 +3,13 @@ import GenericTable from "../components/GenericTable";
 import { useState, useMemo, useEffect } from "react";
 import { apiGet, apiPut } from "../apis/client";
 import { getPayments, addPayment } from "../apis/payments";
+import { loadMoraConfig, saveMoraConfig } from "../constants/moraConfig"; // <-- added
 
 export default function Overdues() {
   const [overdues, setOverdues] = useState([]);
   const [payments, setPayments] = useState([]);
-  const [config, setConfig] = useState({ dailyRate: 0.05, startAfterDays: 10 });
+  // load config from localStorage as initial fallback (keeps UI testable)
+  const [config, setConfig] = useState(() => loadMoraConfig());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,14 +17,19 @@ export default function Overdues() {
       setLoading(true);
       try {
         const cfg = await apiGet("/overdues/config");
-        setConfig({
-          dailyRate: cfg.rate ?? 0.05,
-          startAfterDays: cfg.startDay ?? 10,
-          mode: cfg.mode ?? "simple",
-        });
+        const mapped = {
+          dailyRate: typeof cfg?.rate === "number" ? cfg.rate : loadMoraConfig().dailyRate,
+          startAfterDays: typeof cfg?.startDay === "number" ? cfg.startDay : loadMoraConfig().startAfterDays,
+          mode: cfg?.mode ?? loadMoraConfig().mode ?? "simple",
+        };
+        setConfig(mapped);
+        // persist a local copy so UI still works if backend later unavailable
+        saveMoraConfig(mapped);
       } catch (err) {
         console.error("Error al obtener configuración:", err);
-        alert("Error al cargar configuración de mora");
+        // usar fallback local si falla el backend (permite pruebas sin auth)
+        setConfig(loadMoraConfig());
+        // no bloquear la UI con alert, mostrar en consola
       } finally {
         setLoading(false);
       }
@@ -47,6 +54,8 @@ export default function Overdues() {
   const handleUpdateConfig = async (patch) => {
     const next = { ...config, ...patch };
     setConfig(next);
+    // guardar localmente inmediatamente para pruebas y persistencia
+    saveMoraConfig(next);
     try {
       await apiPut("/overdues/config", {
         rate: next.dailyRate,
@@ -55,20 +64,27 @@ export default function Overdues() {
       });
     } catch (err) {
       console.error("Error al guardar configuración:", err);
-      alert("Error al guardar configuración de mora");
+      // si falla el PUT, dejar la configuración local (rollback opcional)
+      alert("Error al guardar configuración de mora (backend)");
     }
   };
 
   const today = new Date();
 
   const rows = useMemo(() => {
+    // Mapear overdues preservando id numérico de unidad (si existe) y etiqueta amigable
     return overdues.map((o) => {
       const due = new Date(o.dueDate || o.date || o.due || new Date());
       const diffMs = today - due;
       const rawDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 
+      // normalizar unidad: preferir unitId / unit_id numérico cuando exista,
+      // y conservar unitLabel para mostrar en UI
+      const unitId = o.unitId ?? o.unit_id ?? o.unit_id ?? o.unit ?? null;
+      const unitLabel = o.unit ?? o.unit_name ?? (unitId ? String(unitId) : "—");
+
       const paid = payments
-        .filter((p) => (p.unitId || p.unit) === (o.unitId || o.unit))
+        .filter((p) => String(p.unitId ?? p.unit ?? p.unit_id ?? "") === String(unitId ?? unitLabel))
         .reduce((s, p) => s + (p.amount || 0), 0);
 
       const originalAmount = o.originalAmount ?? o.base ?? o.amount ?? 0;
@@ -79,7 +95,8 @@ export default function Overdues() {
 
       return {
         id: o.id,
-        unit: o.unit || o.unitId,
+        unitId: unitId ?? null,
+        unitLabel,
         dueDate: o.dueDate || o.date || o.due,
         originalAmount,
         paid,
@@ -94,18 +111,27 @@ export default function Overdues() {
   const handleMarkPaid = async (id) => {
     const row = rows.find((r) => r.id === id);
     if (!row) return;
+    const uid = row.unitId ?? row.unitLabel;
+    const payload = {
+      unitId: uid,
+      unit_id: uid,
+      amount: Number(row.totalWithMora) || 0,
+      date: new Date().toISOString().slice(0, 10),
+      method: "manual",
+      overdueId: row.id, // <-- enviar overdueId para que backend lo elimine
+    };
     try {
-      await addPayment({
-        unitId: row.unit,
-        amount: row.totalWithMora,
-        date: new Date().toISOString().slice(0, 10),
-        method: "manual",
-      });
+      const saved = await addPayment(payload);
+      const savedPayment = saved && (saved.id || saved.amount)
+        ? { id: saved.id ?? `local-${Date.now()}`, unitId: saved.unitId ?? saved.unit_id ?? uid, amount: saved.amount ?? payload.amount, date: saved.date ?? payload.date, method: saved.method ?? payload.method }
+        : { id: `local-${Date.now()}`, unitId: uid, amount: payload.amount, date: payload.date, method: payload.method };
+      // confirmar eliminación localmente: filtrar por overdue id
       setOverdues((prev) => prev.filter((o) => o.id !== id));
-      setPayments((prev) => [...prev, { id: Date.now(), unitId: row.unit, amount: row.totalWithMora, date: new Date().toISOString().slice(0,10), method: "manual" }]);
+      setPayments((prev) => [...prev, savedPayment]);
     } catch (err) {
       console.error("Error marking paid:", err);
-      alert("No se pudo marcar como pagado");
+      const msg = err?.response?.data?.message || err?.message || "No se pudo marcar como pagado";
+      alert(msg);
     }
   };
 
