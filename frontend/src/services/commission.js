@@ -22,3 +22,11 @@ export function getCommissionForMonth(month, config) {
   };
 }
 
+export async function getCommissions() {
+  return api.getCommissions();
+}
+
+export async function markCommissionPaid(id) {
+  return api.deleteCommission(id);
+}
+

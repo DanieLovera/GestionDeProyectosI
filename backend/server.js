@@ -11,6 +11,7 @@ import { overduesRouter } from "./src/routes/overduesRoute.js";
 import { commissionRouter } from "./src/routes/commissionRoute.js";
 import { settingsRouter } from "./src/routes/settingsRoute.js";
 import { reportsRouter } from "./src/routes/reportsRoute.js";
+import { commissionsRouter } from "./src/routes/commissionsRoute.js";
 import bcrypt from "bcrypt";
 
 const app = express();
@@ -130,6 +131,43 @@ dbPromise.then(async (db) => {
         console.log("  - Common expenses seeded");
       } else {
         console.log("  - Common expenses existen, saltando seed de common_expenses");
+      }
+
+      // Asegurar que exista commission_config y seedear comisiones administrativas como gastos comunes
+      const commConf = await db.get("SELECT * FROM commission_config LIMIT 1");
+      let commissionRate = 0.1; // valor por defecto
+      if (!commConf) {
+        await db.run("INSERT INTO commission_config (rate, base) VALUES (?, ?)", [commissionRate, 10000]);
+        console.log("  - commission_config seeded con valores por defecto");
+      } else {
+        commissionRate = Number(commConf.rate) || commissionRate;
+        console.log("  - commission_config existe, rate =", commissionRate);
+      }
+
+      // Insertar filas de comisión en common_expenses si no existen (Agosto/Septiembre/Octubre 2025)
+      const commExistingCount = (await db.get(
+        "SELECT COUNT(*) as cnt FROM common_expenses WHERE description LIKE 'Comisión administración %'"
+      )).cnt || 0;
+
+      if (commExistingCount === 0) {
+        const sample = [
+          { label: "Agosto", base: 50000, date: "2025-08-31" },
+          { label: "Septiembre", base: 55000, date: "2025-09-30" },
+          { label: "Octubre", base: 60000, date: "2025-10-31" },
+        ];
+
+        for (const s of sample) {
+          const amount = Math.round((s.base || 0) * commissionRate);
+          const description = `Comisión administración - ${s.label}`;
+          await db.run("INSERT INTO common_expenses (description, amount, date) VALUES (?, ?, ?)", [
+            description,
+            amount,
+            s.date,
+          ]);
+        }
+        console.log(`  - Insertadas ${sample.length} comisiones administrativas en common_expenses`);
+      } else {
+        console.log("  - Comisiones administrativas ya existen en common_expenses, saltando seed de comisiones");
       }
 
       const pCount = (await db.get("SELECT COUNT(*) as cnt FROM payments")).cnt || 0;
@@ -316,6 +354,7 @@ app.use("/payments", paymentsRouter);
 app.use("/individual-expenses", individualExpensesRouter);
 app.use("/overdues", overduesRouter);
 app.use("/config/commission", commissionRouter);
+app.use("/commissions", commissionsRouter); // <-- nueva ruta para listar y marcar comisiones como pagadas
 app.use("/", settingsRouter);
 app.use("/reports", reportsRouter);
 

@@ -1,14 +1,13 @@
 import MenuLayout from "../components/MenuLayout";
 import { useEffect, useMemo, useState } from "react";
 import GenericTable from "../components/GenericTable";
-import feesMock from "../mocks/fees";
-import { getCommissionConfig, setCommissionConfig, getCommissionForMonth } from "../services/commission";
+import { getCommissions, markCommissionPaid, getCommissionConfig, setCommissionConfig, getCommissionForMonth } from "../services/commission";
 import { getnPreviousMonth } from "../utils/getnPreviousMonth";
 import { nPreviousMonths } from "../constants/config";
 import GenericSelect from "../components/GenericSelect";
 
 export default function Fees() {
-  const [fees, setFees] = useState(feesMock);
+  const [fees, setFees] = useState([]); // ahora vienen de la BD
   const [config, setConfig] = useState({ rate: 0, base: 0 });
   const [loading, setLoading] = useState(true);
   const months = getnPreviousMonth(nPreviousMonths);
@@ -28,14 +27,41 @@ export default function Fees() {
     })();
   }, []);
 
+  // Cargar comisiones desde BD
+  const loadCommissions = async () => {
+    try {
+      setLoading(true);
+      const items = await getCommissions();
+      // normalizar al formato esperado por la UI (baseAmount/commission/date/description/id)
+      const normalized = (items || []).map((it) => ({
+        id: it.id,
+        description: it.description,
+        baseAmount: it.baseAmount ?? 0, // si no existe, conservar 0
+        commission: it.amount ?? 0,
+        date: it.date,
+      }));
+      setFees(normalized);
+    } catch (err) {
+      console.error("Error cargando comisiones:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCommissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const rows = useMemo(() => {
+    // fees ya contienen commission (vienen de DB) o fall back a cálculo local
     const rate = Number(config.rate) || 0;
     return fees.map((f) => {
-      const commission = Math.round(f.baseAmount * rate);
+      const commission = Number(f.commission) || Math.round((f.baseAmount || 0) * rate);
       return {
         id: f.id,
         description: f.description,
-        baseAmount: f.baseAmount,
+        baseAmount: f.baseAmount || 0,
         commission,
         date: f.date,
       };
@@ -47,7 +73,17 @@ export default function Fees() {
     [chosenMonth, config]
   );
 
-  const markPaid = (id) => setFees((prev) => prev.filter((f) => f.id !== id));
+  const markPaid = async (id) => {
+    try {
+      await markCommissionPaid(id);
+      // refrescar lista desde backend
+      await loadCommissions();
+      alert("Comisión marcada como pagada ✅");
+    } catch (err) {
+      console.error("Error marcando comisión como pagada:", err);
+      alert("Error al marcar como pagado");
+    }
+  };
 
   const handleSave = async () => {
     try {
