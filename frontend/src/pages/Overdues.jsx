@@ -1,14 +1,13 @@
 import MenuLayout from "../components/MenuLayout";
 import GenericTable from "../components/GenericTable";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { apiGet, apiPut } from "../apis/client";
 import { getPayments, addPayment } from "../apis/payments";
 import { loadMoraConfig, saveMoraConfig } from "../constants/moraConfig"; // <-- added
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Overdues() {
-  const [overdues, setOverdues] = useState([]);
-  const [payments, setPayments] = useState([]);
-  // load config from localStorage as initial fallback (keeps UI testable)
+  const queryClient = useQueryClient();
   const [config, setConfig] = useState(() => loadMoraConfig());
   const [loading, setLoading] = useState(true);
 
@@ -37,19 +36,26 @@ export default function Overdues() {
     fetch();
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [ods, pays] = await Promise.all([apiGet("/overdues").catch(() => []), getPayments()]);
-        setOverdues(ods || []);
-        setPayments(pays || []);
-      } catch (err) {
-        console.error("Error fetching overdues/payments:", err);
-        alert("Error al cargar moras o pagos");
-      }
-    };
-    fetchData();
-  }, []);
+  // useQuery para overdues y payments (react-query maneja cache e invalidación)
+  const {
+    data: overdues = [],
+    isLoading: isLoadingOverdues,
+    isError: isErrorOverdues,
+  } = useQuery({
+    queryKey: ["overdues"],
+    queryFn: () => apiGet("/overdues"),
+    enabled: !loading,
+  });
+
+  const {
+    data: payments = [],
+    isLoading: isLoadingPayments,
+    isError: isErrorPayments,
+  } = useQuery({
+    queryKey: ["payments"],
+    queryFn: () => getPayments(),
+    enabled: !loading,
+  });
 
   const handleUpdateConfig = async (patch) => {
     const next = { ...config, ...patch };
@@ -73,17 +79,17 @@ export default function Overdues() {
 
   const rows = useMemo(() => {
     // Mapear overdues preservando id numérico de unidad (si existe) y etiqueta amigable
-    return overdues.map((o) => {
+    return (overdues || []).map((o) => {
       const due = new Date(o.dueDate || o.date || o.due || new Date());
       const diffMs = today - due;
       const rawDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 
       // normalizar unidad: preferir unitId / unit_id numérico cuando exista,
       // y conservar unitLabel para mostrar en UI
-      const unitId = o.unitId ?? o.unit_id ?? o.unit_id ?? o.unit ?? null;
+      const unitId = o.unitId ?? o.unit_id ?? o.unit ?? null;
       const unitLabel = o.unit ?? o.unit_name ?? (unitId ? String(unitId) : "—");
 
-      const paid = payments
+      const paid = (payments || [])
         .filter((p) => String(p.unitId ?? p.unit ?? p.unit_id ?? "") === String(unitId ?? unitLabel))
         .reduce((s, p) => s + (p.amount || 0), 0);
 
@@ -109,6 +115,33 @@ export default function Overdues() {
     });
   }, [overdues, payments, today, config]);
 
+  // mutación para crear pago + eliminación de overdue en backend
+  const addPaymentMutation = useMutation({
+    mutationFn: (payload) => addPayment(payload),
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries(["overdues"]);
+      const previous = queryClient.getQueryData(["overdues"]) || [];
+      queryClient.setQueryData(["overdues"], previous.filter((o) => o.id !== payload.overdueId));
+      return { previous };
+    },
+    onError: (err, payload, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["overdues"], context.previous);
+      }
+      console.error("Error adding payment:", err);
+      alert("No se pudo registrar el pago");
+    },
+    onSuccess: (saved) => {
+      // asegurar que las listas de pagos y moras se refresquen en toda la app
+      queryClient.invalidateQueries(["payments"]);
+      queryClient.invalidateQueries(["overdues"]);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(["payments"]);
+      queryClient.invalidateQueries(["overdues"]);
+    },
+  });
+
   const handleMarkPaid = async (id) => {
     const row = rows.find((r) => r.id === id);
     if (!row) return;
@@ -119,22 +152,52 @@ export default function Overdues() {
       amount: Number(row.totalWithMora) || 0,
       date: new Date().toISOString().slice(0, 10),
       method: "manual",
-      overdueId: row.id, // <-- enviar overdueId para que backend lo elimine
+      overdueId: row.id,
     };
     try {
-      const saved = await addPayment(payload);
-      const savedPayment = saved && (saved.id || saved.amount)
-        ? { id: saved.id ?? `local-${Date.now()}`, unitId: saved.unitId ?? saved.unit_id ?? uid, amount: saved.amount ?? payload.amount, date: saved.date ?? payload.date, method: saved.method ?? payload.method }
-        : { id: `local-${Date.now()}`, unitId: uid, amount: payload.amount, date: payload.date, method: payload.method };
-      // confirmar eliminación localmente: filtrar por overdue id
-      setOverdues((prev) => prev.filter((o) => o.id !== id));
-      setPayments((prev) => [...prev, savedPayment]);
+      await addPaymentMutation.mutateAsync(payload);
+      // local UI ya se actualiza por onMutate / invalidación
     } catch (err) {
       console.error("Error marking paid:", err);
       const msg = err?.response?.data?.message || err?.message || "No se pudo marcar como pagado";
       alert(msg);
     }
   };
+
+  // evitar llamar varias veces al endpoint en re-renders
+  const generatedRef = useRef(false);
+
+  // generar automáticamente overdues para el mes actual la primera vez que se carga la página
+  useEffect(() => {
+    if (loading || generatedRef.current) return;
+    const gen = async () => {
+      try {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const year = String(now.getFullYear());
+        const res = await fetch(`/overdues/generate?month=${month}&year=${year}`, { method: "POST" });
+        if (res.ok) {
+          // opcional: leer respuesta para logs
+          const json = await res.json().catch(() => null);
+          if (json && json.generated) {
+            console.log(`Generadas ${json.generated} moras para ${month}/${year}`);
+          }
+          // forzar recarga de moras y pagos
+          queryClient.invalidateQueries(["overdues"]);
+          queryClient.invalidateQueries(["payments"]);
+        } else {
+          console.warn("No se pudo generar moras automáticamente:", res.status);
+        }
+      } catch (err) {
+        console.error("Error al invocar /overdues/generate:", err);
+      } finally {
+        generatedRef.current = true;
+      }
+    };
+    gen();
+  }, [loading, queryClient]);
+
+  const isAnyLoading = loading || isLoadingOverdues || isLoadingPayments;
 
   if (loading) return <MenuLayout><p>Cargando configuración...</p></MenuLayout>;
 
@@ -167,7 +230,9 @@ export default function Overdues() {
           />
         </div>
 
-        {rows.length === 0 ? (
+        {isAnyLoading ? (
+          <p>Cargando...</p>
+        ) : rows.length === 0 ? (
           <p>No hay deudas vencidas.</p>
         ) : (
           <GenericTable

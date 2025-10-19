@@ -234,6 +234,80 @@ app.post("/payments", async (req, res) => {
   }
 });
 
+// nuevo helper: genera moras para un mes/año en la BD pasada
+async function generateOverduesFor(db, month, year) {
+  // month: "01".."12", year: "2025"
+  const totalRow = await db.get(
+    `SELECT COALESCE(SUM(amount),0) as total
+     FROM common_expenses
+     WHERE strftime('%m', date) = ? AND strftime('%Y', date) = ?`,
+    [month, year]
+  );
+  const totalCommon = Number(totalRow?.total || 0);
+
+  const units = await db.all(`SELECT id, name, surface FROM units`);
+  const totalSurface = units.reduce((s, u) => s + (Number(u.surface) || 0), 0);
+
+  const paymentsRows = await db.all(
+    `SELECT COALESCE(unit_id, 0) as unit_id, COALESCE(SUM(amount),0) as paid
+     FROM payments
+     WHERE strftime('%m', date) = ? AND strftime('%Y', date) = ?
+     GROUP BY unit_id`,
+    [month, year]
+  );
+  const paidMap = {};
+  paymentsRows.forEach((p) => {
+    paidMap[String(p.unit_id)] = Number(p.paid || 0);
+  });
+
+  const dueDate = `${year}-${month}-01`;
+  const created = [];
+
+  for (const u of units) {
+    // sólo unidades con id numérico (tabla units)
+    const pct = totalSurface > 0 ? (Number(u.surface) || 0) / totalSurface : 0;
+    const amountToPay = Math.round(totalCommon * pct);
+    const paid = paidMap[String(u.id)] || 0;
+    const pending = Math.max(0, amountToPay - paid);
+
+    if (pending > 0) {
+      // evitar duplicados para la misma unidad y mes
+      const exists = await db.get(
+        "SELECT 1 FROM overdues WHERE unit_id = ? AND dueDate = ? LIMIT 1",
+        [u.id, dueDate]
+      );
+      if (!exists) {
+        const r = await db.run(
+          "INSERT INTO overdues (unit_id, unit_name, dueDate, originalAmount) VALUES (?, ?, ?, ?)",
+          [u.id, u.name, dueDate, pending]
+        );
+        const inserted = await db.get("SELECT * FROM overdues WHERE id = ?", [r.lastID]);
+        created.push(inserted);
+      }
+    }
+  }
+
+  return created;
+}
+
+// endpoint para generar moras manualmente por mes/año
+app.post("/overdues/generate", async (req, res) => {
+  try {
+    const month = req.query.month ? String(req.query.month).padStart(2, "0") : null;
+    const year = req.query.year ? String(req.query.year) : null;
+    if (!month || !year) {
+      return res.status(400).json({ message: "month y year son requeridos como query params" });
+    }
+
+    const db = await dbPromise;
+    const created = await generateOverduesFor(db, month, year);
+    return res.json({ generated: created.length, items: created });
+  } catch (err) {
+    console.error("Error generando moras:", err);
+    return res.status(500).json({ message: "Error generando moras", error: err?.message || String(err) });
+  }
+});
+
 // Registrar rutas (asegurar que esto ocurra independientemente del seed)
 app.use("/units", unitsRouter);
 app.use("/users", usersRouter);
@@ -248,3 +322,39 @@ app.use("/reports", reportsRouter);
 // Iniciar servidor
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.listen(PORT, () => console.log(`✅ Backend corriendo en http://localhost:${PORT}`));
+
+// ejecutar generación automática al arrancar y programar ejecución diaria
+(async () => {
+  try {
+    const db = await dbPromise;
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = String(now.getFullYear());
+
+    const created = await generateOverduesFor(db, month, year);
+    if (created.length) {
+      console.log(`Auto-generated ${created.length} overdues for ${month}/${year}`);
+    } else {
+      console.log(`Auto-generate: no new overdues for ${month}/${year}`);
+    }
+  } catch (e) {
+    console.error("Auto-generate failed at startup:", e);
+  }
+
+  // programar ejecución cada 24h (puedes cambiar a cron si prefieres otro intervalo)
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const db = await dbPromise;
+      const now = new Date();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const year = String(now.getFullYear());
+      const created = await generateOverduesFor(db, month, year);
+      if (created.length) {
+        console.log(`Scheduled auto-generated ${created.length} overdues for ${month}/${year}`);
+      }
+    } catch (err) {
+      console.error("Scheduled auto-generate failed:", err);
+    }
+  }, DAY_MS);
+})();

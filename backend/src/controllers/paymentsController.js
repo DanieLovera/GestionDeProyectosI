@@ -37,15 +37,36 @@ export const getPayments = async (req, res) => {
 };
 
 export const createPayment = async (req, res) => {
-  const { unitId, amount, date, method } = req.body;
+  const { unitId, unit_id, amount, date, method, overdueId } = req.body;
   try {
     const db = await getDb();
+
+    // Normalizar unitId (si viene como 'U1' queda null; asumimos ids numéricos en la BDD)
+    const uidRaw = unitId ?? unit_id ?? null;
+    const unitIdNormalized = Number(uidRaw) || null;
+
+    if (amount == null) {
+      return res.status(400).json({ message: "amount is required" });
+    }
+
     const result = await db.run(
       "INSERT INTO payments (unit_id, amount, date, method) VALUES (?, ?, ?, ?)",
-      [unitId, amount, date, method]
+      [unitIdNormalized, amount, date || new Date().toISOString().slice(0, 10), method || "manual"]
     );
 
-    return res.status(200).json({ message: "Pago creado con id " + result.lastID });
+    // Devolver el registro creado en lugar de un mensaje
+    const saved = await db.get("SELECT * FROM payments WHERE id = ?", [result.lastID]);
+
+    // Si se envió overdueId, eliminar la morosidad asociada para que no vuelva a listarse
+    if (overdueId) {
+      try {
+        await db.run("DELETE FROM overdues WHERE id = ?", [overdueId]);
+      } catch (e) {
+        console.warn("No se pudo eliminar overdue:", e?.message || e);
+      }
+    }
+
+    return res.status(200).json(saved);
   } catch (err) {
     res.status(500).json({
       message: "An unexpected error has occurred.",
