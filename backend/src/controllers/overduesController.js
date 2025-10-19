@@ -7,7 +7,8 @@ export const getOverdueConfig = async (req, res) => {
     const config = await db.get("SELECT * FROM overdues_config LIMIT 1");
 
     if (!config) {
-      return res.json({ rate: 0.05, startDay: 10, mode: "simple" }); // defaults
+      // Default coherente con frontend (0.5% diario)
+      return res.json({ rate: 0.005, startDay: 0, mode: "simple" });
     }
 
     res.json(config);
@@ -40,5 +41,22 @@ export const updateOverdueConfig = async (req, res) => {
   } catch (err) {
     console.error("Error al actualizar configuración de moras:", err);
     res.status(500).json({ message: "Error al actualizar configuración", error: err.message });
+  }
+};
+
+// nuevo: listar moras
+export const getOverdues = async (req, res) => {
+  try {
+    const db = await open({ filename: "./data/database.db", driver: sqlite3.Database });
+    const rows = await db.all(`
+      SELECT o.id, o.unit_id as unitId, COALESCE(u.name, o.unit_name) as unit, o.dueDate, o.originalAmount
+      FROM overdues o
+      LEFT JOIN units u ON u.id = o.unit_id
+      ORDER BY o.dueDate DESC
+    `);
+    res.json(rows || []);
+  } catch (err) {
+    console.error("Error al obtener moras:", err);
+    res.status(500).json({ message: "Error al obtener moras", error: err.message });
   }
 };

@@ -13,8 +13,6 @@ import { settingsRouter } from "./src/routes/settingsRoute.js";
 import { reportsRouter } from "./src/routes/reportsRoute.js";
 import bcrypt from "bcrypt";
 
-
-
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -25,7 +23,7 @@ const dbPromise = open({
   driver: sqlite3.Database
 });
 
-// Reemplaza los múltiples dbPromise.then(...) por una inicialización única y el seed opcional
+// Inicialización única y seed opcional
 dbPromise.then(async (db) => {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS units (
@@ -95,18 +93,32 @@ dbPromise.then(async (db) => {
     )
   `);
 
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS overdues (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      unit_id INTEGER,
+      unit_name TEXT,
+      dueDate DATE,
+      originalAmount REAL,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (unit_id) REFERENCES units (id)
+    )
+  `);
+
   // Seed opcional: solo si SEED_DB === "true"
   const shouldSeed = String(process.env.SEED_DB || "false").toLowerCase() === "true";
   if (shouldSeed) {
     try {
       console.log("⏳ SEED_DB=true -> verificando datos iniciales...");
       // comprobar y seed solo si tablas vacías
-      const uCount = (await db.get("SELECT COUNT(*) as cnt FROM units")).cnt || 0;
+      let uCount = (await db.get("SELECT COUNT(*) as cnt FROM units")).cnt || 0;
       if (uCount === 0) {
         await db.run("INSERT INTO units (name, surface, owner) VALUES (?, ?, ?)", ["Depto 1", 50, "Propietario 1"]);
         await db.run("INSERT INTO units (name, surface, owner) VALUES (?, ?, ?)", ["Depto 2", 40, "Propietario 2"]);
         await db.run("INSERT INTO units (name, surface, owner) VALUES (?, ?, ?)", ["Depto 3", 30, "Propietario 3"]);
         console.log("  - Units seeded");
+        // recomputar cantidad de unidades después del seed
+        uCount = (await db.get("SELECT COUNT(*) as cnt FROM units")).cnt || 0;
       } else {
         console.log("  - Units existen, saltando seed de units");
       }
@@ -121,15 +133,17 @@ dbPromise.then(async (db) => {
       }
 
       const pCount = (await db.get("SELECT COUNT(*) as cnt FROM payments")).cnt || 0;
-      if (pCount === 0 && uCount > 0) {
-        // obtener primer unit id
+      if (pCount === 0) {
+        // obtener primer unit id (consultar de nuevo para estar seguro)
         const firstUnit = await db.get("SELECT id FROM units LIMIT 1");
         if (firstUnit) {
           await db.run("INSERT INTO payments (unit_id, amount, date, method) VALUES (?, ?, ?, ?)", [firstUnit.id, 8000, "2025-10-05", "transferencia"]);
           console.log("  - Payments seeded");
+        } else {
+          console.log("  - No hay units disponibles para seed de payments");
         }
       } else {
-        console.log("  - Payments existen o no hay units, saltando seed de payments");
+        console.log("  - Payments existen, saltando seed de payments");
       }
 
       const usersCount = (await db.get("SELECT COUNT(*) as cnt FROM users")).cnt || 0;
@@ -147,6 +161,32 @@ dbPromise.then(async (db) => {
         console.log("  - Users existen, saltando seed de users");
       }
 
+      const overduesCount = (await db.get("SELECT COUNT(*) as cnt FROM overdues")).cnt || 0;
+      if (overduesCount === 0) {
+        // intentar asignar unit_id a los primeros units existentes
+        const rows = await db.all("SELECT id, name FROM units LIMIT 5");
+        if (rows && rows.length > 0) {
+          const sample = [
+            { unit: rows[0], due: "2025-09-01", amount: 20000 },
+            { unit: rows[1] || rows[0], due: "2025-08-15", amount: 15000 },
+            { unit: rows[2] || rows[0], due: "2025-07-20", amount: 10000 },
+          ];
+          for (const s of sample) {
+            if (s.unit) {
+              await db.run(
+                "INSERT INTO overdues (unit_id, unit_name, dueDate, originalAmount) VALUES (?, ?, ?, ?)",
+                [s.unit.id, s.unit.name, s.due, s.amount]
+              );
+            }
+          }
+          console.log("  - Overdues seeded");
+        } else {
+          console.log("  - No hay units para seed de overdues");
+        }
+      } else {
+        console.log("  - Overdues existen, saltando seed de overdues");
+      }
+
       console.log("✅ Seed finalizado (si se insertó algo).");
     } catch (err) {
       console.error("Error durante el seed de la base:", err);
@@ -154,8 +194,11 @@ dbPromise.then(async (db) => {
   } else {
     console.log("SEED_DB !== true -> seed deshabilitado");
   }
+}).catch((err) => {
+  console.error("Error inicializando la base de datos:", err);
 });
 
+// Registrar rutas (asegurar que esto ocurra independientemente del seed)
 app.use("/units", unitsRouter);
 app.use("/users", usersRouter);
 app.use("/common-expenses", commonExpensesRouter);
@@ -166,8 +209,6 @@ app.use("/config/commission", commissionRouter);
 app.use("/", settingsRouter);
 app.use("/reports", reportsRouter);
 
-
-
 // Iniciar servidor
-const PORT = 3000;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.listen(PORT, () => console.log(`✅ Backend corriendo en http://localhost:${PORT}`));
