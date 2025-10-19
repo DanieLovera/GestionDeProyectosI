@@ -97,6 +97,7 @@ export default function Overdues() {
         id: o.id,
         unitId: unitId ?? null,
         unitLabel,
+        unit: unitLabel,
         dueDate: o.dueDate || o.date || o.due,
         originalAmount,
         paid,
