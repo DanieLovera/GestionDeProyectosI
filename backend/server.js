@@ -24,8 +24,9 @@ const dbPromise = open({
   driver: sqlite3.Database
 });
 
-// Inicialización única y seed opcional
-dbPromise.then(async (db) => {
+// Guardar la promesa de inicialización que ejecuta las DDLs/seed.
+// Antes se usaba dbPromise.then(...) sin exponer la promesa resultante; ahora la guardamos.
+const initPromise = dbPromise.then(async (db) => {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS units (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -365,7 +366,8 @@ app.listen(PORT, () => console.log(`✅ Backend corriendo en http://localhost:${
 // ejecutar generación automática al arrancar y programar ejecución diaria
 (async () => {
   try {
-    const db = await dbPromise;
+    // esperar a que termine la inicialización/seed antes de generar moras
+    const db = await initPromise;
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const year = String(now.getFullYear());
@@ -384,7 +386,7 @@ app.listen(PORT, () => console.log(`✅ Backend corriendo en http://localhost:${
   const DAY_MS = 24 * 60 * 60 * 1000;
   setInterval(async () => {
     try {
-      const db = await dbPromise;
+      const db = await initPromise; // esperar init antes de cada ejecución programada
       const now = new Date();
       const month = String(now.getMonth() + 1).padStart(2, "0");
       const year = String(now.getFullYear());
