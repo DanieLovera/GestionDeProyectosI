@@ -12,7 +12,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState("Administrador");
   const [consortium, setConsortium] = useState("");
 
   const handleSubmit = (e) => {
@@ -44,16 +44,6 @@ export default function Register() {
           {/* Correo electrónico */}
           <div className="form-group">
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Correo electrónico" required />
-          </div>
-
-          {/* Rol */}
-          <div className="form-group">
-            <select required value={role} onChange={(e) => setRole(e.target.value)}>
-              <option value="">Rol</option>
-              <option value="admin">Administrador</option>
-              <option value="inquilino">Inquilino</option>
-              <option value="propietario">Propietario</option>
-            </select>
           </div>
 
           {/* Consorcio */}
@@ -105,12 +95,6 @@ export default function Register() {
             </span>
           </div>
 
-          {/* Términos */}
-          <div className="form-terms">
-            <input type="checkbox" required />
-            <span>Acepto los términos y condiciones</span>
-          </div>
-
           {/* Botón */}
           <button type="submit" className="btn-register">
             Registrarme
@@ -120,21 +104,6 @@ export default function Register() {
         {/* Divider */}
         <div className="divider">o</div>
 
-        {/* Social buttons */}
-        <div className="social-buttons">
-          <button className="btn-google">
-            <FcGoogle size={20} /> Regístrate con Google
-          </button>
-          <button className="btn-microsoft">
-            <img
-              src="https://img.icons8.com/color/48/microsoft.png"
-              alt="Microsoft"
-              width="20"
-              height="20"
-            />
-            Regístrate con Microsoft
-          </button>
-        </div>
 
         {/* Link a login */}
         <p className="login-link">

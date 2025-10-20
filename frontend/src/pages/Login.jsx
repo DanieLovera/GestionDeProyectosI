@@ -52,7 +52,7 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="login-form">
           {/* Consorcio */}
           <div className="form-group">
-            <input type="text" value={consortium} onChange={(e) => setConsortium(e.target.value)} placeholder="Selecciona tu consorcio" required />
+            <input type="text" value={consortium} onChange={(e) => setConsortium(e.target.value)} placeholder="Nombre de tu consorcio" required />
           </div>
 
           {/* Email */}
@@ -80,50 +80,12 @@ export default function Login() {
           {/* Error mensaje (simulación) */}
           <p className="error-text">Contraseña débil</p>
 
-          {/* Links */}
-          <div className="login-links">
-            <a href="#">¿Olvidaste tu contraseña?</a>
-            <a href="#">Recibir link por email</a>
-          </div>
-
           {/* Botón */}
           <button type="submit" className="btn-login">
             Iniciar sesión <span className="arrow">→</span>
           </button>
-
-          {/* Checkbox */}
-          <div className="remember-me">
-            <input type="checkbox" id="remember" />
-            <label htmlFor="remember">Recuérdame</label>
-          </div>
         </form>
-
-        {/* Divider */}
-        <div className="divider">ou</div>
-
-        {/* Social */}
-        <div className="social-buttons">
-          <button className="btn-google">
-            <FcGoogle size={20} /> Iniciar sesión con Google
-          </button>
-          <button className="btn-microsoft">
-            <img
-              src="https://img.icons8.com/color/48/microsoft.png"
-              alt="Microsoft"
-              width="20"
-              height="20"
-            />
-            Iniciar sesión con Microsoft
-          </button>
-        </div>
-
-        {/* Footer */}
-        <div className="login-footer">
-          <a href="#">Idioma: ES / EN</a> ·
-          <a href="#">Términos</a> ·
-          <a href="#">Privacidad</a> ·
-          <a href="#">Contacto</a>
-        </div>
+        
       </div>
     </div>
   );
