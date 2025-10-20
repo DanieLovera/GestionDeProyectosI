@@ -12,7 +12,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [role, setRole] = useState("Administrador");
+  const role = "Administrador";
   const [consortium, setConsortium] = useState("");
 
   const handleSubmit = (e) => {
@@ -48,11 +48,7 @@ export default function Register() {
 
           {/* Consorcio */}
           <div className="form-group">
-            <select required value={consortium} onChange={(e) => setConsortium(e.target.value)}>
-              <option value="">Seleccionar consorcio</option>
-              <option value="edificio">Edificio</option>
-              <option value="torre">Torre</option>
-            </select>
+            <input type="text" value={consortium} onChange={(e) => setConsortium(e.target.value)} placeholder="Nombre de Consorcio" required />
           </div>
 
           {/* Número de unidad */}
