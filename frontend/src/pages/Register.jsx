@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import "./Register.css";
-import axios from 'axios';
+import { apiPost } from "../apis/client";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -12,22 +11,28 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const role = "Administrador";
-  const [consortium, setConsortium] = useState("");
+  const role = "Administrador"; 
+  const [consortium, setConsortium] = useState(""); 
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const API_URL = import.meta.env.VITE_API_URL;
-    axios.post(`${API_URL}/users/register`, { name, email, password, role, consortium })
-      .then(response => {
-        console.log("Registro exitoso:", response.data);
-        alert("Registro exitoso");
-        navigate("/login");
-      })
-      .catch(error => {
-        console.error("Error al registrar:", error);
-        alert("Error al registrar");
+
+    try {
+      const response = await apiPost("/users/register", {
+        name,
+        email,
+        password,
+        role,
+        consortium,
       });
+
+      console.log("Registro exitoso:", response);
+      alert("Registro exitoso");
+      navigate("/login");
+    } catch (error) {
+      console.error("Error al registrar:", error);
+      alert("Error al registrar: " + error.message);
+    }
   };
 
   return (
@@ -38,24 +43,34 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="register-form">
           {/* Nombre */}
           <div className="form-group">
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" required />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nombre"
+              required
+            />
           </div>
 
           {/* Correo electrónico */}
           <div className="form-group">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Correo electrónico" required />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Correo electrónico"
+              required
+            />
           </div>
 
-          {/* Consorcio */}
-          <div className="form-group">
-            <input type="text" value={consortium} onChange={(e) => setConsortium(e.target.value)} placeholder="Nombre de Consorcio" required />
-          </div>
-
-          {/* Número de unidad */}
+          {/* Consorcio (campo libre, no select) */}
           <div className="form-group">
             <input
               type="text"
-              placeholder="Número de unidad/superficie (opcional)"
+              value={consortium}
+              onChange={(e) => setConsortium(e.target.value)}
+              placeholder="Nombre de Consorcio"
+              required
             />
           </div>
 
@@ -96,10 +111,6 @@ export default function Register() {
             Registrarme
           </button>
         </form>
-
-        {/* Divider */}
-        <div className="divider">o</div>
-
 
         {/* Link a login */}
         <p className="login-link">

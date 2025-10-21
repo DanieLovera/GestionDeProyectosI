@@ -4,7 +4,7 @@ import paths from "../constants/paths";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import "./Login.css";
-import axios from 'axios';
+import { apiPost } from "../apis/client";
 
 export default function Login() {
   const [role, setRole] = useState("Administrador");
@@ -15,20 +15,26 @@ export default function Login() {
   const API_URL = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
 
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const response = await apiPost("/users/login", {
+      email,
+      password,
+      consortium,
+    });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // mock login: store user in localStorage and navigate
-    const user = { name: role === 'Administrador' ? 'Admin Demo' : 'Propietario Demo', role };
-    axios.post(`${API_URL}/users/login`, { email: email, password: password, consortium: consortium })
-      .then(response => {
-        localStorage.setItem('gdpi_user', JSON.stringify(user));
-        navigate(paths.reports);
-      })
-      .catch(error => {
-        console.error('Error logging in:', error);
-      });
-  };
+    localStorage.setItem("token", response.accessToken); 
+    localStorage.setItem("gdpi_user", JSON.stringify(response.user));
+
+    console.log("Inicio de sesión exitoso:", response);
+    navigate(paths.reports);
+  } catch (error) {
+    console.error("Error al iniciar sesión:", error);
+    alert("Credenciales incorrectas o error en el servidor.");
+  }
+};
+
 
   return (
     <div className="login-container">
