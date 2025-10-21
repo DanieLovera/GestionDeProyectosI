@@ -2,68 +2,48 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import paths from "../constants/paths";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import "./Login.css";
 import { apiPost } from "../apis/client";
 
 export default function Login() {
-  const [role, setRole] = useState("Administrador");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [consortium, setConsortium] = useState("");
   const API_URL = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    const response = await apiPost("/users/login", {
-      email,
-      password,
-      consortium,
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await apiPost("/users/login", {
+        email,
+        password,
+      });
 
-    localStorage.setItem("token", response.accessToken); 
-    localStorage.setItem("gdpi_user", JSON.stringify(response.user));
+      localStorage.setItem("token", response.accessToken);
+      localStorage.setItem("gdpi_user", JSON.stringify(response.user));
 
-    console.log("Inicio de sesión exitoso:", response);
-    navigate(paths.reports);
-  } catch (error) {
-    console.error("Error al iniciar sesión:", error);
-    alert("Credenciales incorrectas o error en el servidor.");
-  }
-};
-
+      console.log("Inicio de sesión exitoso:", response);
+      navigate(paths.reports);
+    } catch (error) {
+      console.error("Error al iniciar sesión:", error);
+      alert("Credenciales incorrectas o error en el servidor.");
+    }
+  };
 
   return (
     <div className="login-container">
       <div className="login-card">
-        {/* Tabs */}
-        <div className="login-tabs">
-          <button
-            className={role === "Administrador" ? "active" : ""}
-            onClick={() => setRole("Administrador")}
-          >
-            Administrador
-          </button>
-          <button
-            className={role === "Propietario" ? "active" : ""}
-            onClick={() => setRole("Propietario")}
-          >
-            Propietario
-          </button>
-        </div>
-
         <form onSubmit={handleSubmit} className="login-form">
-          {/* Consorcio */}
-          <div className="form-group">
-            <input type="text" value={consortium} onChange={(e) => setConsortium(e.target.value)} placeholder="Nombre de tu consorcio" required />
-          </div>
-
           {/* Email */}
           <div className="form-group">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@correo.com" required />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="usuario@correo.com"
+              required
+            />
           </div>
 
           {/* Password */}
@@ -83,7 +63,7 @@ const handleSubmit = async (e) => {
             </span>
           </div>
 
-          {/* Error mensaje (simulación) */}
+          {/* Mensaje de error (si querés mantenerlo visualmente) */}
           <p className="error-text">Contraseña débil</p>
 
           {/* Botón */}
@@ -91,8 +71,8 @@ const handleSubmit = async (e) => {
             Iniciar sesión <span className="arrow">→</span>
           </button>
         </form>
-        
       </div>
     </div>
   );
 }
+
