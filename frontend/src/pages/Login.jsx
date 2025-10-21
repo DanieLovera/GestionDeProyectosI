@@ -9,16 +9,12 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const API_URL = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await apiPost("/users/login", {
-        email,
-        password,
-      });
+      const response = await apiPost("/users/login", { email, password });
 
       localStorage.setItem("token", response.accessToken);
       localStorage.setItem("gdpi_user", JSON.stringify(response.user));
@@ -34,6 +30,9 @@ export default function Login() {
   return (
     <div className="login-container">
       <div className="login-card">
+        <h2 className="login-title">¡Bienvenido de nuevo!</h2>
+        <p className="login-subtitle">Inicia sesión para continuar</p>
+
         <form onSubmit={handleSubmit} className="login-form">
           {/* Email */}
           <div className="form-group">
@@ -41,7 +40,7 @@ export default function Login() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="usuario@correo.com"
+              placeholder="Correo electrónico"
               required
             />
           </div>
@@ -63,16 +62,21 @@ export default function Login() {
             </span>
           </div>
 
-          {/* Mensaje de error (si querés mantenerlo visualmente) */}
-          <p className="error-text">Contraseña débil</p>
-
           {/* Botón */}
           <button type="submit" className="btn-login">
             Iniciar sesión <span className="arrow">→</span>
           </button>
         </form>
+
+        <p className="register-link">
+          ¿No tienes cuenta?{" "}
+          <span onClick={() => navigate("/register")}>Regístrate aquí</span>
+        </p>
       </div>
     </div>
   );
 }
+
+
+
 
