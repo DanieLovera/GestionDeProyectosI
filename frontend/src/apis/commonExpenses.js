@@ -1,10 +1,9 @@
-import commonExpenses from "../mocks/commonExpenses.js";
+import { apiGet, apiPost } from "./client.js";
 
-const mockDataFetch = (data, delay) => new Promise((resolve) => setTimeout(() => resolve(data), delay));
-
-const getCommonExpenses = async () => {
-    const response = await mockDataFetch(commonExpenses, 1000);
-    return response;
+export const getCommonExpenses = async () => {
+  return await apiGet("/common-expenses");
 };
 
-export { getCommonExpenses };
+export const addCommonExpense = async (expense) => {
+  return await apiPost("/common-expenses", expense);
+};

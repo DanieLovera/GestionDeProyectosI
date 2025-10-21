@@ -10,8 +10,10 @@ export default function Sidebar() {
         <li><NavLink to={paths.reports} className={({ isActive }) => isActive ? "active" : ""}>Reportes</NavLink></li>
         <li><NavLink to={paths.commonExpenses} className={({ isActive }) => isActive ? "active" : ""}>Gastos Comunes</NavLink></li>
         <li><NavLink to={paths.individualExpenses} className={({ isActive }) => isActive ? "active" : ""}>Gastos Particulares</NavLink></li>
+        <li><NavLink to={paths.expensesDistribution} className={({ isActive }) => isActive ? "active" : ""}>Expensas</NavLink></li>
         <li><NavLink to={paths.overdues} className={({ isActive }) => isActive ? "active" : ""}>Moras</NavLink></li>
         <li><NavLink to={paths.fees} className={({ isActive }) => isActive ? "active" : ""}>Comisiones</NavLink></li>
+        <li><NavLink to={paths.units} className={({ isActive }) => isActive ? "active" : ""}>Unidades</NavLink></li>
       </ul>
     </div>
   );

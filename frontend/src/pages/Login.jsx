@@ -2,62 +2,47 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import paths from "../constants/paths";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import "./Login.css";
-import axios from 'axios';
+import { apiPost } from "../apis/client";
 
 export default function Login() {
-  const [role, setRole] = useState("Administrador");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [consortium, setConsortium] = useState("");
-  const API_URL = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
 
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // mock login: store user in localStorage and navigate
-    const user = { name: role === 'Administrador' ? 'Admin Demo' : 'Propietario Demo', role };
-    axios.post(`${API_URL}/users/login`, { email: email, password: password, consortium: consortium })
-      .then(response => {
-        localStorage.setItem('gdpi_user', JSON.stringify(user));
-        navigate(paths.reports);
-      })
-      .catch(error => {
-        console.error('Error logging in:', error);
-      });
+    try {
+      const response = await apiPost("/users/login", { email, password });
+
+      localStorage.setItem("token", response.accessToken);
+      localStorage.setItem("gdpi_user", JSON.stringify(response.user));
+
+      console.log("Inicio de sesión exitoso:", response);
+      navigate(paths.reports);
+    } catch (error) {
+      console.error("Error al iniciar sesión:", error);
+      alert("Credenciales incorrectas o error en el servidor.");
+    }
   };
 
   return (
     <div className="login-container">
       <div className="login-card">
-        {/* Tabs */}
-        <div className="login-tabs">
-          <button
-            className={role === "Administrador" ? "active" : ""}
-            onClick={() => setRole("Administrador")}
-          >
-            Administrador
-          </button>
-          <button
-            className={role === "Propietario" ? "active" : ""}
-            onClick={() => setRole("Propietario")}
-          >
-            Propietario
-          </button>
-        </div>
+        <h2 className="login-title">¡Bienvenido de nuevo!</h2>
+        <p className="login-subtitle">Inicia sesión para continuar</p>
 
         <form onSubmit={handleSubmit} className="login-form">
-          {/* Consorcio */}
-          <div className="form-group">
-            <input type="text" value={consortium} onChange={(e) => setConsortium(e.target.value)} placeholder="Nombre de tu consorcio" required />
-          </div>
-
           {/* Email */}
           <div className="form-group">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@correo.com" required />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Correo electrónico"
+              required
+            />
           </div>
 
           {/* Password */}
@@ -77,16 +62,21 @@ export default function Login() {
             </span>
           </div>
 
-          {/* Error mensaje (simulación) */}
-          <p className="error-text">Contraseña débil</p>
-
           {/* Botón */}
           <button type="submit" className="btn-login">
             Iniciar sesión <span className="arrow">→</span>
           </button>
         </form>
-        
+
+        <p className="register-link">
+          ¿No tienes cuenta?{" "}
+          <span onClick={() => navigate("/register")}>Regístrate aquí</span>
+        </p>
       </div>
     </div>
   );
 }
+
+
+
+
