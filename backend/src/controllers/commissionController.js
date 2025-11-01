@@ -3,7 +3,8 @@ import sqlite3 from "sqlite3";
 
 export const getCommissionConfig = async (req, res) => {
   try {
-    const db = await open({ filename: "./data/database.db", driver: sqlite3.Database });
+    const db = req.tenantDb;
+    if (!db) return res.status(400).json({ message: "Consortium requerido" });
     const config = await db.get("SELECT * FROM commission_config LIMIT 1");
 
     if (!config) {
@@ -25,7 +26,9 @@ export const updateCommissionConfig = async (req, res) => {
   }
 
   try {
-    const db = await open({ filename: "./data/database.db", driver: sqlite3.Database });
+    const db = req.tenantDb;
+    if (!db) return res.status(400).json({ message: "Consortium requerido" });
+
     const existing = await db.get("SELECT * FROM commission_config LIMIT 1");
 
     if (existing) {

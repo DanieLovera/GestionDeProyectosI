@@ -130,3 +130,13 @@ Convenciones recomendadas
 - Errores: { error: { code, message, details? } } con status HTTP apropiados.
 - Fechas: ISO 'YYYY-MM-DD'.
 
+Multitenancy por consorcio
+- Cada consorcio usa su propia base de datos SQLite separada.
+- El backend resuelve el consorcio de:
+  1) JWT (claim "consortium") si envías Authorization: Bearer <token>
+  2) o header "X-Consortium: <nombre_del_consorcio>" (útil para pruebas locales sin token)
+- Recomendado: tras login/registro, usar el token (que ya incluye consortium).
+
+Ejemplo (curl):
+- curl -X POST http://localhost:3000/overdues/generate?month=10&year=2025 -H "X-Consortium: MiConsorcio"
+

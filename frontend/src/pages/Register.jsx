@@ -27,6 +27,7 @@ export default function Register() {
       });
 
       console.log("Registro exitoso:", response);
+      try { localStorage.setItem("consortium", consortium); } catch {}
       alert("Registro exitoso");
       navigate("/login");
     } catch (error) {

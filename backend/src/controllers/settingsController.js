@@ -8,10 +8,8 @@ export const getPaymentMethods = async (req, res) => {
 
 export const getConsortiumSettings = async (req, res) => {
   try {
-    const db = await open({
-      filename: "./data/database.db",
-      driver: sqlite3.Database,
-    });
+    const db = req.tenantDb;
+    if (!db) return res.status(400).json({ message: "Consortium requerido" });
 
     await db.exec(`
       CREATE TABLE IF NOT EXISTS consortium_settings (
@@ -24,7 +22,6 @@ export const getConsortiumSettings = async (req, res) => {
     `);
 
     let settings = await db.get("SELECT * FROM consortium_settings LIMIT 1");
-
     if (!settings) {
       settings = {
         name: "Consorcio Central",
@@ -33,7 +30,6 @@ export const getConsortiumSettings = async (req, res) => {
         timezone: "America/Argentina/Buenos_Aires",
       };
     }
-
     res.json(settings);
   } catch (err) {
     console.error("Error al obtener configuración del consorcio:", err);

@@ -15,6 +15,7 @@ services:
       - JWT_SECRET=gestion
       - SEED_DB=true    # Cambiar a "true" para insertar datos de ejemplo al iniciar
       - SEED_FORCE=false # Opcional: si true, forzaría re-seed (este ejemplo solo hace seed si tablas vacías)
+      - TENANTS_DIR=./data/tenants
   frontend:
     build: ./frontend
     container_name: frontend

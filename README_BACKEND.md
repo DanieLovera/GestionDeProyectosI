@@ -16,31 +16,30 @@ Copia `.env.example` a `.env` en la carpeta del backend y ajusta las variables:
 - DB_NAME=mi_base_de_datos
 - ADMIN_EMAIL=admin@example.com
 - ADMIN_PASSWORD=Admin1234
+- TENANTS_DIR=./data/tenants  <!-- opcional: carpeta donde se crean las DB por consorcio -->
 
 3) Levantar con Docker Compose (recomendado)
 - Desde la raíz del proyecto:
   - docker compose up --build -d
   - docker compose logs -f (para ver inicialización)
-- Si el contenedor del backend incluye un script de seed automático, la base de datos y los datos iniciales estarán listos tras el arranque.
 
-4) Ejecutar script de seed manualmente (si existe)
-- Desde la raíz o carpeta `backend`:
-  - docker compose exec backend npm run seed
-  - o (local) cd backend && npm install && npm run seed
-- Si no hay script, usa el ejemplo SQL o la API abajo.
+4) Multitenancy por consorcio
+- La base global `./data/database.db` solo guarda usuarios.
+- Cada consorcio tiene su propia base: `./data/tenants/<slug>/database.db`.
+- Al registrarse un usuario (POST /users/register) se crea la base del consorcio e inserta datos iniciales (unidades, gastos comunes, config de comisión, etc.).
+- Para acceder a datos de un consorcio:
+  - Preferido: usa token JWT (el claim `consortium` se añade en el login).
+  - Alternativa para pruebas: manda el header `X-Consortium: <nombre>`.
 
-5) Ejemplo de inserción SQL (Postgres)
-- Conéctate a la BD y ejecuta:
-  - INSERT INTO users (name, email, password, role) VALUES ('Admin','admin@example.com','<hash_de_password>','admin');
-- Nota: normalmente el password debe guardarse hasheado. Preferible usar el script de seed o la API que haga hash automáticamente.
+5) Crear usuario inicial vía API (ejemplo curl)
+- Registro:
+  - curl -X POST http://localhost:3000/users/register -H "Content-Type: application/json" -d '{"name":"Admin","email":"admin@example.com","password":"Admin1234","role":"admin","consortium":"MiConsorcio"}'
+- Login:
+  - curl -X POST http://localhost:3000/users/login -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"Admin1234"}'
+- Con el token, ya no necesitas `X-Consortium`.
 
-6) Crear usuario inicial vía API (ejemplo curl)
-- Ajusta host/puerto y rutas según tu backend:
-  - Registro:
-    - curl -X POST http://localhost:3000/api/auth/register -H "Content-Type: application/json" -d '{"name":"Admin","email":"admin@example.com","password":"Admin1234"}'
-  - Login:
-    - curl -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"Admin1234"}'
-- Respuesta típica: token y datos del usuario. Usa ese token para llamadas autenticadas.
+6) Generar moras (ejemplo)
+- curl -X POST "http://localhost:3000/overdues/generate?month=10&year=2025" -H "X-Consortium: MiConsorcio"
 
 7) Credenciales de ejemplo (ajusta en `.env` o en el seed)
 - Email: admin@example.com

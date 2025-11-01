@@ -176,7 +176,11 @@ export default function Overdues() {
         const month = String(now.getMonth() + 1).padStart(2, "0");
         const year = String(now.getFullYear());
         const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const res = await fetch(`${apiBase.replace(/\/$/, "")}/overdues/generate?month=${month}&year=${year}`, { method: "POST" });
+        const consortium = (typeof window !== "undefined" && localStorage.getItem("consortium")) || "";
+        const res = await fetch(`${apiBase.replace(/\/$/, "")}/overdues/generate?month=${month}&year=${year}`, {
+          method: "POST",
+          headers: { "X-Consortium": consortium }
+        });
         if (res.ok) {
           // opcional: leer respuesta para logs
           const json = await res.json().catch(() => null);

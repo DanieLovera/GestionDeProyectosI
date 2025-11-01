@@ -13,20 +13,34 @@ import { settingsRouter } from "./src/routes/settingsRoute.js";
 import { reportsRouter } from "./src/routes/reportsRoute.js";
 import { commissionsRouter } from "./src/routes/commissionsRoute.js";
 import bcrypt from "bcrypt";
+import fs from "fs";
+import path from "path";
+import jwt from "jsonwebtoken";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Conexión a SQLite
+// Conexión a SQLite (GLOBAL - solo usuarios)
 const dbPromise = open({
   filename: "./data/database.db",
   driver: sqlite3.Database
 });
 
-// Guardar la promesa de inicialización que ejecuta las DDLs/seed.
-// Antes se usaba dbPromise.then(...) sin exponer la promesa resultante; ahora la guardamos.
-const initPromise = dbPromise.then(async (db) => {
+// --- Multi-tenant helpers ---
+const TENANTS_DIR = process.env.TENANTS_DIR || "./data/tenants";
+if (!fs.existsSync(TENANTS_DIR)) {
+  fs.mkdirSync(TENANTS_DIR, { recursive: true });
+}
+
+const tenantCache = new Map();
+
+function slugifyConsortium(name = "") {
+  return String(name).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "default";
+}
+
+async function ensureTenantSchema(db) {
+  // Tablas por consorcio (idénticas a las que tenías antes)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS units (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +49,6 @@ const initPromise = dbPromise.then(async (db) => {
       owner TEXT
     )
   `);
-
   await db.exec(`
     CREATE TABLE IF NOT EXISTS common_expenses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,7 +57,6 @@ const initPromise = dbPromise.then(async (db) => {
       date DATE
     )
   `);
-
   await db.exec(`
     CREATE TABLE IF NOT EXISTS payments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,18 +67,6 @@ const initPromise = dbPromise.then(async (db) => {
       FOREIGN KEY (unit_id) REFERENCES units (id)
     )
   `);
-
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      email TEXT unique,
-      password TEXT,
-      role TEXT,
-      consortium TEXT
-    )
-  `);
-
   await db.exec(`
     CREATE TABLE IF NOT EXISTS individual_expenses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,7 +77,6 @@ const initPromise = dbPromise.then(async (db) => {
       FOREIGN KEY (unit_id) REFERENCES units (id)
     )
   `);
-
   await db.exec(`
     CREATE TABLE IF NOT EXISTS overdues_config (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,7 +85,6 @@ const initPromise = dbPromise.then(async (db) => {
       mode TEXT
     )
   `);
-
   await db.exec(`
     CREATE TABLE IF NOT EXISTS commission_config (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,7 +92,6 @@ const initPromise = dbPromise.then(async (db) => {
       base REAL
     )
   `);
-
   await db.exec(`
     CREATE TABLE IF NOT EXISTS overdues (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,157 +103,298 @@ const initPromise = dbPromise.then(async (db) => {
       FOREIGN KEY (unit_id) REFERENCES units (id)
     )
   `);
+}
 
-  // Seed opcional: solo si SEED_DB === "true"
+async function getTenantDb(consortiumName) {
+  const slug = slugifyConsortium(consortiumName);
+  if (tenantCache.has(slug)) return tenantCache.get(slug);
+
+  const dir = path.join(TENANTS_DIR, slug);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const filename = path.join(dir, "database.db");
+
+  const db = await open({ filename, driver: sqlite3.Database });
+  await ensureTenantSchema(db); // asegura estructura
+  tenantCache.set(slug, db);
+  return db;
+}
+
+// Middleware: decodifica JWT y resuelve tenant (JWT o X-Consortium o ?consortium)
+app.use(async (req, res, next) => {
+  try {
+    const auth = req.headers.authorization || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+    let decoded = null;
+    if (token) {
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
+      } catch {
+        // token inválido -> continuar sin usuario
+      }
+    }
+    req.authUser = decoded || null;
+
+    const consortium =
+      (decoded && decoded.consortium) ||
+      req.headers["x-consortium"] ||
+      req.query.consortium ||
+      null;
+
+    if (consortium) {
+      req.tenantDb = await getTenantDb(consortium);
+      req.consortium = consortium;
+    }
+    next();
+  } catch (e) {
+    console.error("Tenant resolver error:", e);
+    next();
+  }
+});
+
+// NUEVO: Guard global — exige consorcio en todas las rutas salvo auth/health
+app.use((req, res, next) => {
+  const openPaths = ["/users/login", "/users/register", "/health"];
+  if (openPaths.some((p) => req.path.startsWith(p))) return next();
+  if (!req.tenantDb) {
+    return res.status(400).json({
+      message: "Consortium requerido. Envíe Authorization Bearer con claim 'consortium' o header 'X-Consortium'.",
+    });
+  }
+  next();
+});
+
+// Guardar la promesa de inicialización (GLOBAL - usuarios)
+const initPromise = dbPromise.then(async (db) => {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      email TEXT unique,
+      password TEXT,
+      role TEXT,
+      consortium TEXT
+    )
+  `);
+
+  // IMPORTANTE: crear también el esquema completo en la DB global para no romper routers existentes
+  await ensureTenantSchema(db);
+
+  // Seed global opcional: solo usuarios de demo
   const shouldSeed = String(process.env.SEED_DB || "false").toLowerCase() === "true";
   if (shouldSeed) {
     try {
-      console.log("⏳ SEED_DB=true -> verificando datos iniciales...");
-      // comprobar y seed solo si tablas vacías
-      let uCount = (await db.get("SELECT COUNT(*) as cnt FROM units")).cnt || 0;
-      if (uCount === 0) {
-        await db.run("INSERT INTO units (name, surface, owner) VALUES (?, ?, ?)", ["Depto 1", 50, "Propietario 1"]);
-        await db.run("INSERT INTO units (name, surface, owner) VALUES (?, ?, ?)", ["Depto 2", 40, "Propietario 2"]);
-        await db.run("INSERT INTO units (name, surface, owner) VALUES (?, ?, ?)", ["Depto 3", 30, "Propietario 3"]);
-        console.log("  - Units seeded");
-        // recomputar cantidad de unidades después del seed
-        uCount = (await db.get("SELECT COUNT(*) as cnt FROM units")).cnt || 0;
-      } else {
-        console.log("  - Units existen, saltando seed de units");
-      }
-
-      const ceCount = (await db.get("SELECT COUNT(*) as cnt FROM common_expenses")).cnt || 0;
-      if (ceCount === 0) {
-        await db.run("INSERT INTO common_expenses (description, amount, date) VALUES (?, ?, ?)", ["Limpieza mensual", 12000, "2025-10-01"]);
-        await db.run("INSERT INTO common_expenses (description, amount, date) VALUES (?, ?, ?)", ["Seguro edificio", 8000, "2025-10-05"]);
-        console.log("  - Common expenses seeded");
-      } else {
-        console.log("  - Common expenses existen, saltando seed de common_expenses");
-      }
-
-      // Asegurar que exista commission_config y seedear comisiones administrativas como gastos comunes
-      const commConf = await db.get("SELECT * FROM commission_config LIMIT 1");
-      let commissionRate = 0.1; // valor por defecto
-      if (!commConf) {
-        await db.run("INSERT INTO commission_config (rate, base) VALUES (?, ?)", [commissionRate, 10000]);
-        console.log("  - commission_config seeded con valores por defecto");
-      } else {
-        commissionRate = Number(commConf.rate) || commissionRate;
-        console.log("  - commission_config existe, rate =", commissionRate);
-      }
-
-      // Insertar filas de comisión en common_expenses si no existen (Agosto/Septiembre/Octubre 2025)
-      const commExistingCount = (await db.get(
-        "SELECT COUNT(*) as cnt FROM common_expenses WHERE description LIKE 'Comisión administración %'"
-      )).cnt || 0;
-
-      if (commExistingCount === 0) {
-        const sample = [
-          { label: "Agosto", base: 50000, date: "2025-08-31" },
-          { label: "Septiembre", base: 55000, date: "2025-09-30" },
-          { label: "Octubre", base: 60000, date: "2025-10-31" },
-        ];
-
-        for (const s of sample) {
-          const amount = Math.round((s.base || 0) * commissionRate);
-          const description = `Comisión administración - ${s.label}`;
-          await db.run("INSERT INTO common_expenses (description, amount, date) VALUES (?, ?, ?)", [
-            description,
-            amount,
-            s.date,
-          ]);
-        }
-        console.log(`  - Insertadas ${sample.length} comisiones administrativas en common_expenses`);
-      } else {
-        console.log("  - Comisiones administrativas ya existen en common_expenses, saltando seed de comisiones");
-      }
-
-      const pCount = (await db.get("SELECT COUNT(*) as cnt FROM payments")).cnt || 0;
-      if (pCount === 0) {
-        // obtener primer unit id (consultar de nuevo para estar seguro)
-        const firstUnit = await db.get("SELECT id FROM units LIMIT 1");
-        if (firstUnit) {
-          await db.run("INSERT INTO payments (unit_id, amount, date, method) VALUES (?, ?, ?, ?)", [firstUnit.id, 8000, "2025-10-05", "transferencia"]);
-          console.log("  - Payments seeded");
-        } else {
-          console.log("  - No hay units disponibles para seed de payments");
-        }
-      } else {
-        console.log("  - Payments existen, saltando seed de payments");
-      }
-
+      console.log("⏳ SEED_DB=true (global users)...");
       const usersCount = (await db.get("SELECT COUNT(*) as cnt FROM users")).cnt || 0;
       if (usersCount === 0) {
         const pw = await bcrypt.hash("password", 10);
-        await db.run("INSERT INTO users (name, email, password, role, consortium) VALUES (?, ?, ?, ?, ?)", [
-          "Admin Demo",
-          "admin@example.com",
-          pw,
-          "admin",
-          "DemoConsortium"
-        ]);
+        await db.run(
+          "INSERT INTO users (name, email, password, role, consortium) VALUES (?, ?, ?, ?, ?)",
+          ["Admin Demo", "admin@example.com", pw, "admin", "DemoConsortium"]
+        );
         console.log("  - Users seeded (admin@example.com / password)");
       } else {
         console.log("  - Users existen, saltando seed de users");
       }
-
-      const overduesCount = (await db.get("SELECT COUNT(*) as cnt FROM overdues")).cnt || 0;
-      if (overduesCount === 0) {
-        // intentar asignar unit_id a los primeros units existentes
-        const rows = await db.all("SELECT id, name FROM units LIMIT 5");
-        if (rows && rows.length > 0) {
-          const sample = [
-            { unit: rows[0], due: "2025-09-01", amount: 20000 },
-            { unit: rows[1] || rows[0], due: "2025-08-15", amount: 15000 },
-            { unit: rows[2] || rows[0], due: "2025-07-20", amount: 10000 },
-          ];
-          for (const s of sample) {
-            if (s.unit) {
-              await db.run(
-                "INSERT INTO overdues (unit_id, unit_name, dueDate, originalAmount) VALUES (?, ?, ?, ?)",
-                [s.unit.id, s.unit.name, s.due, s.amount]
-              );
-            }
-          }
-          console.log("  - Overdues seeded");
-        } else {
-          console.log("  - No hay units para seed de overdues");
-        }
-      } else {
-        console.log("  - Overdues existen, saltando seed de overdues");
-      }
-
-      console.log("✅ Seed finalizado (si se insertó algo).");
     } catch (err) {
-      console.error("Error durante el seed de la base:", err);
+      console.error("Error durante seed global de users:", err);
     }
-  } else {
-    console.log("SEED_DB !== true -> seed deshabilitado");
   }
 }).catch((err) => {
   console.error("Error inicializando la base de datos:", err);
 });
 
-// nuevo endpoint ligero para asegurar que marcar pago elimina la mora asociada
+// --- Endpoints TENANT-AWARE previos a routers ---
+
+// Overdues config (tenant)
+app.get("/overdues/config", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const row = await db.get("SELECT rate, startDay, mode FROM overdues_config LIMIT 1");
+    if (!row) return res.json({ rate: 0.001, startDay: 0, mode: "simple" });
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ message: "Error al obtener configuración", error: err.message });
+  }
+});
+app.put("/overdues/config", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const { rate, startDay, mode } = req.body;
+    const existing = await db.get("SELECT id FROM overdues_config LIMIT 1");
+    if (existing) {
+      await db.run("UPDATE overdues_config SET rate=?, startDay=?, mode=? WHERE id=?", [rate, startDay, mode ?? "simple", existing.id]);
+    } else {
+      await db.run("INSERT INTO overdues_config (rate, startDay, mode) VALUES (?, ?, ?)", [rate, startDay, mode ?? "simple"]);
+    }
+    res.json({ rate, startDay, mode: mode ?? "simple" });
+  } catch (err) {
+    res.status(500).json({ message: "Error al guardar configuración", error: err.message });
+  }
+});
+
+// Common expenses (mínimo GET/POST tenant)
+app.get("/common-expenses", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const rows = await db.all("SELECT * FROM common_expenses ORDER BY date DESC, id DESC");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: "Error al listar gastos", error: err.message });
+  }
+});
+app.post("/common-expenses", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const { description, amount, date } = req.body;
+    const r = await db.run("INSERT INTO common_expenses (description, amount, date) VALUES (?, ?, ?)", [description, amount, date]);
+    const saved = await db.get("SELECT * FROM common_expenses WHERE id = ?", [r.lastID]);
+    res.json(saved);
+  } catch (err) {
+    res.status(500).json({ message: "An unexpected error has occurred.", error: err.message });
+  }
+});
+
+// Individual expenses (tenant)
+app.get("/individual-expenses", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const { unitId, from, to } = req.query;
+    const where = [];
+    const params = [];
+    if (unitId) { where.push("unit_id = ?"); params.push(unitId); }
+    if (from) { where.push("date >= ?"); params.push(from); }
+    if (to) { where.push("date <= ?"); params.push(to); }
+    const sql = `SELECT * FROM individual_expenses ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY date DESC, id DESC`;
+    const rows = await db.all(sql, params);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: "Error al listar gastos individuales", error: err.message });
+  }
+});
+app.post("/individual-expenses", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const { unitId, description, amount, date } = req.body;
+    const r = await db.run(
+      "INSERT INTO individual_expenses (unit_id, description, amount, date) VALUES (?, ?, ?, ?)",
+      [unitId, description, amount, date]
+    );
+    const saved = await db.get("SELECT * FROM individual_expenses WHERE id = ?", [r.lastID]);
+    res.json(saved);
+  } catch (err) {
+    res.status(500).json({ message: "Error al crear gasto individual", error: err.message });
+  }
+});
+
+// Commissions (listar desde common_expenses por descripción)
+app.get("/commissions", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const rows = await db.all(
+      "SELECT id, description, amount, date FROM common_expenses WHERE description LIKE 'Comisión administración %' ORDER BY date DESC, id DESC"
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: "Error al listar comisiones", error: err.message });
+  }
+});
+
+// Reports (tenant)
+app.get("/reports/dashboard", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const month = String(req.query.month || new Date().getMonth() + 1).padStart(2, "0");
+    const year = String(req.query.year || new Date().getFullYear());
+    const ce = await db.get(
+      "SELECT COALESCE(SUM(amount),0) total FROM common_expenses WHERE strftime('%m', date)=? AND strftime('%Y', date)=?",
+      [month, year]
+    );
+    const collected = await db.get(
+      "SELECT COALESCE(SUM(amount),0) total FROM payments WHERE strftime('%m', date)=? AND strftime('%Y', date)=?",
+      [month, year]
+    );
+    const overdue = await db.get(
+      "SELECT COALESCE(SUM(originalAmount),0) total FROM overdues WHERE strftime('%m', dueDate)=? AND strftime('%Y', dueDate)=?",
+      [month, year]
+    );
+    res.json({
+      period: { month, year },
+      totals: {
+        commonExpenses: Number(ce.total || 0),
+        collected: Number(collected.total || 0),
+        overdue: Number(overdue.total || 0),
+        lateFees: 0
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Error en dashboard", error: err.message });
+  }
+});
+app.get("/reports/by-unit", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const month = String(req.query.month || new Date().getMonth() + 1).padStart(2, "0");
+    const year = String(req.query.year || new Date().getFullYear());
+    const units = await db.all("SELECT id, name, surface FROM units");
+    const totalSurface = units.reduce((s,u)=>s+(Number(u.surface)||0),0);
+    const ce = await db.get(
+      "SELECT COALESCE(SUM(amount),0) total FROM common_expenses WHERE strftime('%m', date)=? AND strftime('%Y', date)=?",
+      [month, year]
+    );
+    const pays = await db.all(
+      "SELECT unit_id, COALESCE(SUM(amount),0) paid FROM payments WHERE strftime('%m', date)=? AND strftime('%Y', date)=? GROUP BY unit_id",
+      [month, year]
+    );
+    const payMap = Object.fromEntries(pays.map(p=>[String(p.unit_id||""), Number(p.paid||0)]));
+    const items = units.map(u=>{
+      const pct = totalSurface>0 ? (Number(u.surface)||0)/totalSurface : 0;
+      const amount = Math.round(Number(ce.total||0)*pct);
+      const paid = payMap[String(u.id)]||0;
+      const pending = Math.max(0, amount - paid);
+      return { id: u.id, name: u.name, surface: u.surface, participationPct: pct, amount, paid, pending, lateFee: 0 };
+    });
+    res.json({ period: { month, year }, units: items });
+  } catch (err) {
+    res.status(500).json({ message: "Error en reporte por unidad", error: err.message });
+  }
+});
+app.get("/reports/by-category", async (req, res) => {
+  try {
+    const db = req.tenantDb;
+    const month = String(req.query.month || new Date().getMonth() + 1).padStart(2, "0");
+    const year = String(req.query.year || new Date().getFullYear());
+    const rows = await db.all(
+      "SELECT description as name, COALESCE(SUM(amount),0) amount FROM common_expenses WHERE strftime('%m', date)=? AND strftime('%Y', date)=? GROUP BY description",
+      [month, year]
+    );
+    res.json({ period: { month, year }, categories: rows });
+  } catch (err) {
+    res.status(500).json({ message: "Error en reporte por categoría", error: err.message });
+  }
+});
+
+// --- Endpoints que deben usar la DB del tenant ---
+
+// crear pago (tenant) y borrar overdue asociado
 app.post("/payments", async (req, res) => {
   try {
+    if (!req.tenantDb) {
+      return res.status(400).json({ message: "Consortium requerido (token o header X-Consortium)" });
+    }
     const { unitId, unit_id, amount, date, method, overdueId } = req.body;
     const uidRaw = unitId ?? unit_id ?? null;
     if (!uidRaw || amount == null) {
       return res.status(400).json({ message: "unitId and amount are required" });
     }
 
-    const db = await dbPromise;
+    const db = req.tenantDb;
     const unitIdNormalized = Number(uidRaw) || null;
 
-    // insertar pago
     const r = await db.run(
       "INSERT INTO payments (unit_id, amount, date, method) VALUES (?, ?, ?, ?)",
-      [unitIdNormalized, amount, date || new Date().toISOString().slice(0,10), method || "manual"]
+      [unitIdNormalized, amount, date || new Date().toISOString().slice(0, 10), method || "manual"]
     );
 
-    const insertedId = r.lastID;
-    // si se pasó overdueId, eliminar esa fila de overdues para que no reaparezca
     if (overdueId) {
       try {
         await db.run("DELETE FROM overdues WHERE id = ?", [overdueId]);
@@ -265,7 +403,7 @@ app.post("/payments", async (req, res) => {
       }
     }
 
-    const saved = await db.get("SELECT * FROM payments WHERE id = ?", [insertedId]);
+    const saved = await db.get("SELECT * FROM payments WHERE id = ?", [r.lastID]);
     return res.json(saved);
   } catch (err) {
     console.error("Error en POST /payments:", err);
@@ -273,7 +411,6 @@ app.post("/payments", async (req, res) => {
   }
 });
 
-// nuevo helper: genera moras para un mes/año en la BD pasada
 async function generateOverduesFor(db, month, year) {
   // month: "01".."12", year: "2025"
   const totalRow = await db.get(
@@ -329,17 +466,18 @@ async function generateOverduesFor(db, month, year) {
   return created;
 }
 
-// endpoint para generar moras manualmente por mes/año
 app.post("/overdues/generate", async (req, res) => {
   try {
+    if (!req.tenantDb) {
+      return res.status(400).json({ message: "Consortium requerido (token o header X-Consortium)" });
+    }
     const month = req.query.month ? String(req.query.month).padStart(2, "0") : null;
     const year = req.query.year ? String(req.query.year) : null;
     if (!month || !year) {
       return res.status(400).json({ message: "month y year son requeridos como query params" });
     }
 
-    const db = await dbPromise;
-    const created = await generateOverduesFor(db, month, year);
+    const created = await generateOverduesFor(req.tenantDb, month, year);
     return res.json({ generated: created.length, items: created });
   } catch (err) {
     console.error("Error generando moras:", err);
@@ -347,7 +485,7 @@ app.post("/overdues/generate", async (req, res) => {
   }
 });
 
-// Registrar rutas (asegurar que esto ocurra independientemente del seed)
+// Registrar rutas
 app.use("/units", unitsRouter);
 app.use("/users", usersRouter);
 app.use("/common-expenses", commonExpensesRouter);
@@ -355,7 +493,7 @@ app.use("/payments", paymentsRouter);
 app.use("/individual-expenses", individualExpensesRouter);
 app.use("/overdues", overduesRouter);
 app.use("/config/commission", commissionRouter);
-app.use("/commissions", commissionsRouter); // <-- nueva ruta para listar y marcar comisiones como pagadas
+app.use("/commissions", commissionsRouter);
 app.use("/", settingsRouter);
 app.use("/reports", reportsRouter);
 
@@ -363,39 +501,5 @@ app.use("/reports", reportsRouter);
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.listen(PORT, () => console.log(`✅ Backend corriendo en http://localhost:${PORT}`));
 
-// ejecutar generación automática al arrancar y programar ejecución diaria
-(async () => {
-  try {
-    // esperar a que termine la inicialización/seed antes de generar moras
-    const db = await initPromise;
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const year = String(now.getFullYear());
-
-    const created = await generateOverduesFor(db, month, year);
-    if (created.length) {
-      console.log(`Auto-generated ${created.length} overdues for ${month}/${year}`);
-    } else {
-      console.log(`Auto-generate: no new overdues for ${month}/${year}`);
-    }
-  } catch (e) {
-    console.error("Auto-generate failed at startup:", e);
-  }
-
-  // programar ejecución cada 24h (puedes cambiar a cron si prefieres otro intervalo)
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  setInterval(async () => {
-    try {
-      const db = await initPromise; // esperar init antes de cada ejecución programada
-      const now = new Date();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const year = String(now.getFullYear());
-      const created = await generateOverduesFor(db, month, year);
-      if (created.length) {
-        console.log(`Scheduled auto-generated ${created.length} overdues for ${month}/${year}`);
-      }
-    } catch (err) {
-      console.error("Scheduled auto-generate failed:", err);
-    }
-  }, DAY_MS);
-})();
+// Auto-generate moras en el tenant actual no aplica aquí (depende del consorcio).
+// Puedes dejar tareas programadas por tenant si lo necesitas en otra capa.
