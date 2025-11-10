@@ -7,7 +7,7 @@ import { es } from "date-fns/locale";
 import { NumericFormat } from "react-number-format";
 import { format } from "date-fns";
 
-export default function RegisterPaymentModal({ show, onSave, onClose, unitOptions = [], defaultUnitId, pendingByUnit = {} }) {
+export default function RegisterPaymentModal({ show, onSave, onClose, unitOptions = [], defaultUnitId, pendingByUnit = {}, defaultMonth = null }) {
   // inicializar/actualizar datos cuando se abre el modal o cambia el defaultUnitId
   const [data, setData] = useState({ unitId: defaultUnitId || "", amount: "", date: null, method: "transferencia" });
   const [error, setError] = useState({});
@@ -20,16 +20,24 @@ export default function RegisterPaymentModal({ show, onSave, onClose, unitOption
 
   useEffect(() => {
     if (show) {
+      // Calcular fecha inicial basada en defaultMonth (formato "yyyy-MM")
+      let initialDate = new Date();
+      if (defaultMonth && typeof defaultMonth === 'string' && defaultMonth.includes('-')) {
+        const [year, month] = defaultMonth.split('-');
+        // Usar el primer día del mes seleccionado
+        initialDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      }
+      
       // cuando se abra el modal, setear valores iniciales (unitId puede cambiar entre aperturas)
       setData((p) => ({
         unitId: defaultUnitId || "",
         amount: "",
-        date: new Date(),
+        date: initialDate,
         method: p.method || "transferencia",
       }));
       setError({});
     }
-  }, [show, defaultUnitId]);
+  }, [show, defaultUnitId, defaultMonth]);
 
   const validate = () => {
     const e = {};

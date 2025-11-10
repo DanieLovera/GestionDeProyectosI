@@ -8,7 +8,7 @@ const getnPreviousMonth = (n) => {
         const date = subMonths(now, i);
         return {
             label: capitalizeFirstLetter(format(date, "MMMM yyyy", { locale: es })),
-            value: format(date, "MM"),
+            value: format(date, "yyyy-MM"), // Incluir año para distinguir meses de diferentes años
         };
     });
 };

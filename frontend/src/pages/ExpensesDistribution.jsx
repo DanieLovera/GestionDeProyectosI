@@ -45,7 +45,7 @@ export default function Reports() {
         isError: isErrorCommonExpenses,
     } = useQuery({
         queryKey: ["commonExpenses", chosenMonth],
-        queryFn: () => getCommonExpenses(parseInt(chosenMonth)),
+        queryFn: () => getCommonExpenses(chosenMonth),
     });
 
     const {
@@ -63,7 +63,7 @@ export default function Reports() {
         isError: isErrorPayments,
     } = useQuery({
         queryKey: ["payments", chosenMonth],
-        queryFn: () => getPaymentsByMonth(parseInt(chosenMonth)),
+        queryFn: () => getPaymentsByMonth(chosenMonth),
     });
 
     const isLoading = isLoadingCommonExpenses || isLoadingDepartments || isLoadingPayments;
@@ -141,8 +141,10 @@ export default function Reports() {
             unitId: payment.unitId ?? payment.unit_id ?? payment.unit,
             unit_id: payment.unit_id ?? payment.unitId ?? payment.unit,
         };
+        
         try {
             const saved = await addPaymentMutation.mutateAsync(payload);
+            
             const result = saved && (saved.id || saved.amount || saved.unit_id) ? ( { ...saved, unitId: saved.unitId ?? saved.unit_id } ) : {
                 id: `local-${Date.now()}`,
                 date: payload.date,
@@ -246,6 +248,7 @@ export default function Reports() {
                 unitOptions={unitOptions}
                 defaultUnitId={selectedUnitId}
                 pendingByUnit={pendingByUnit}
+                defaultMonth={chosenMonth}
             />
             <PaymentReceiptModal show={showReceipt} onClose={() => setShowReceipt(false)} receipt={receiptData} />
         </MenuLayout>

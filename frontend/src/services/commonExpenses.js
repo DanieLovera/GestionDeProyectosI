@@ -4,11 +4,21 @@ import { format, parseISO } from "date-fns";
 import { getCommissionForMonth, getCommissionConfig } from "./commission";
 
 const getCommonExpenses = async (month) => {
-    month = month.toString().padStart(2, "0");
     const commonExpenses = await apis.getCommonExpenses();
-    // Filter by month
-    let result = commonExpenses
-        .filter((expense) => format(parseISO(expense.date), "MM") === month);
+    
+    // Filter by month (and year if format is yyyy-MM)
+    let result = commonExpenses.filter((expense) => {
+        const expenseDate = format(parseISO(expense.date), "yyyy-MM");
+        
+        // Si month incluye el año (formato "yyyy-MM"), comparar completo
+        if (typeof month === 'string' && month.includes('-')) {
+            return expenseDate === month;
+        }
+        
+        // Si es solo el mes (número o string "MM"), comparar solo el mes
+        const mm = month.toString().padStart(2, "0");
+        return format(parseISO(expense.date), "MM") === mm;
+    });
 
     // Inject commission expense if configured
     try {
