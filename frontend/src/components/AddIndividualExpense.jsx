@@ -174,8 +174,7 @@ export default function AddIndividualExpense({ show, onSave, onClose }) {
                                     locale={es}
                                     dateFormat="dd/MM/yyyy"
                                     selected={data.date}
-                                    minDate={startOfMonth(new Date())}
-                                    maxDate={endOfMonth(new Date())}
+                                    maxDate={new Date()}
                                     onChange={handleDateChange}
                                 />
                                 {error.date && <div className="invalid-feedback d-block">{error.date}</div>}

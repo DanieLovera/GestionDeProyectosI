@@ -143,8 +143,7 @@ export default function AddCommonExpense({ show, onSave, onClose }) {
                                     placeholderText="Seleccionar fecha"
                                     locale={es}
                                     dateFormat="dd/MM/yyyy"
-                                    minDate={startOfMonth(new Date())}
-                                    maxDate={endOfMonth(new Date())}
+                                    maxDate={new Date()}
                                     selected={data.date}
                                     onChange={handleDateChange}
                                 />
