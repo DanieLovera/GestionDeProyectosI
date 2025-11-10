@@ -8,7 +8,9 @@ export function exportToCsv(filename, rows) {
   };
   const csv = [headers.join(",")].concat(rows.map(r => headers.map(h => escape(r[h])).join(","))).join("\n");
 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  // Agregar BOM para que Excel reconozca UTF-8 correctamente
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);

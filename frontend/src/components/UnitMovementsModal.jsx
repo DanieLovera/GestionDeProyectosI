@@ -22,12 +22,27 @@ export default function UnitMovementsModal({ show, onClose, unit, month }) {
 
   const handleExport = () => {
     if (!data?.movements?.length) return;
-    const rows = data.movements.map((m) => ({
-      Fecha: m.date,
-      Tipo: m.type === "payment" ? "Pago" : m.type === "expense" ? "Expensa" : m.type,
-      Descripcion: m.description,
-      Importe: m.amount,
-    }));
+    const rows = data.movements.map((m) => {
+      // Formato YYYY-MM-DD para Excel
+      const dateObj = new Date(m.date + 'T00:00:00');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      
+      return {
+        Fecha: `${year}-${month}-${day}`,
+        Tipo: m.type === "payment" ? "Pago" : m.type === "expense" ? "Expensa" : m.type,
+        Descripcion: m.description,
+        Importe: Number(m.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      };
+    });
+    // Agregar fila de saldo al final
+    rows.push({
+      Fecha: '',
+      Tipo: '',
+      Descripcion: 'SALDO',
+      Importe: Number(data.balance || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    });
     exportToCsv(`movimientos_${unit?.name || unit?.id}_${periodLabel}.csv`, rows);
   };
 
