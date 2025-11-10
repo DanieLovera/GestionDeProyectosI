@@ -16,6 +16,7 @@ RUN npm install node-addon-api --save-dev
 # Instala las dependencias del proyecto
 RUN npm install
 
+RUN npm install @json2csv/plainjs
 # Copia el resto del código
 COPY . .
 
