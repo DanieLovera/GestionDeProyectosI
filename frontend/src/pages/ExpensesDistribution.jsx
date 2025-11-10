@@ -14,12 +14,24 @@ import { getPaymentsByMonth, addPayment as addPaymentService } from "../services
 
 export default function Reports() {
     const months = getnPreviousMonth(nPreviousMonths);
-    const [chosenMonth, setChosenMonth] = useState(months[0].value);
+    
+    // Restaurar mes guardado o usar el actual
+    const savedMonth = localStorage.getItem('selectedExpenseMonth');
+    const initialMonth = savedMonth && months.find(m => m.value === savedMonth) 
+        ? savedMonth 
+        : months[0].value;
+    
+    const [chosenMonth, setChosenMonth] = useState(initialMonth);
     const [showPayment, setShowPayment] = useState(false);
     const [selectedUnitId, setSelectedUnitId] = useState("");
     const [showReceipt, setShowReceipt] = useState(false);
     const [receiptData, setReceiptData] = useState(null);
     const queryClient = useQueryClient();
+
+    // Guardar mes cuando cambie
+    useEffect(() => {
+        localStorage.setItem('selectedExpenseMonth', chosenMonth);
+    }, [chosenMonth]);
 
     // Invalidar queries cuando cambia el mes
     useEffect(() => {
@@ -110,10 +122,9 @@ export default function Reports() {
             alert("No se pudo registrar el pago");
         },
         onSuccess: async () => {
-            // Reset completo del cache para forzar refetch
-            queryClient.clear();
-            // Recargar la página después de un pequeño delay
-            setTimeout(() => window.location.reload(), 500);
+            // Invalidar queries para que React Query las refresque automáticamente
+            await queryClient.invalidateQueries(["payments", chosenMonth]);
+            await queryClient.invalidateQueries(["commonExpenses", chosenMonth]);
         },
     });
 
