@@ -3,7 +3,7 @@ import { getDb } from "../db.js";
 export const getIndividualExpenses = async (req, res) => {
   const { unitId, from, to } = req.query;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     let query = `
       SELECT ie.*, u.name AS unit
@@ -41,7 +41,7 @@ export const getIndividualExpenses = async (req, res) => {
 export const createIndividualExpense = async (req, res) => {
   const { unitId, description, amount, date } = req.body;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
     const result = await db.run(
       "INSERT INTO individual_expenses (unit_id, description, amount, date) VALUES (?, ?, ?, ?)",
       [unitId, description, amount, date]
@@ -59,7 +59,7 @@ export const createIndividualExpense = async (req, res) => {
 export const getIndividualExpense = async (req, res) => {
   const expenseId = req.params.id;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const expense = await db.get("SELECT * FROM individual_expenses WHERE id = ?", [expenseId]);
 
@@ -80,7 +80,7 @@ export const updateIndividualExpense = async (req, res) => {
   const expenseId = req.params.id;
   const { description, amount, date } = req.body;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const expense = await db.get("SELECT * FROM individual_expenses WHERE id = ?", [expenseId]);
 
@@ -105,7 +105,7 @@ export const updateIndividualExpense = async (req, res) => {
 export const deleteIndividualExpense = async (req, res) => {
   const expenseId = req.params.id;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const expense = await db.get("SELECT * FROM individual_expenses WHERE id = ?", [expenseId]);
 

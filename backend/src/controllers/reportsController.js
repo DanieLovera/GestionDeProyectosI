@@ -9,23 +9,42 @@ export const getDashboardReport = async (req, res) => {
     const start = `${year}-${month}-01`;
     const end = `${year}-${month}-31`;
 
+    console.log(`DEBUG Dashboard - Período: ${start} a ${end}`);
+
     const [{ totalCommon = 0 }] = await db.all(
       "SELECT SUM(amount) AS totalCommon FROM common_expenses WHERE date BETWEEN ? AND ?",
       [start, end]
     );
+    console.log(`DEBUG - Gastos comunes: ${totalCommon}`);
 
     const [{ totalCollected = 0 }] = await db.all(
       "SELECT SUM(amount) AS totalCollected FROM payments WHERE date BETWEEN ? AND ?",
       [start, end]
     );
+    console.log(`DEBUG - Cobrado: ${totalCollected}`);
 
     const [{ totalIndividual = 0 }] = await db.all(
       "SELECT SUM(amount) AS totalIndividual FROM individual_expenses WHERE date BETWEEN ? AND ?",
       [start, end]
     );
+    console.log(`DEBUG - Gastos individuales: ${totalIndividual}`);
 
     const totalDue = totalCommon + totalIndividual;
     const overdue = Math.max(totalDue - totalCollected, 0);
+    console.log(`DEBUG - Total debido: ${totalDue}, Pendiente: ${overdue}`);
+
+    // Calcular moras si hay deuda pendiente del período
+    let lateFees = 0;
+    if (overdue > 0) {
+      const config = await db.get("SELECT * FROM overdues_config LIMIT 1") || { rate: 0.00104, startDay: 0 };
+      const today = new Date();
+      const endDate = new Date(`${year}-${month}-${new Date(year, month, 0).getDate()}`);
+      const daysOverdue = Math.max(0, Math.floor((today - endDate) / (1000 * 60 * 60 * 24)) - config.startDay);
+      
+      if (daysOverdue > 0) {
+        lateFees = overdue * config.rate * daysOverdue;
+      }
+    }
 
     const response = {
       period: { month, year },
@@ -33,7 +52,7 @@ export const getDashboardReport = async (req, res) => {
         commonExpenses: totalCommon,
         collected: totalCollected,
         overdue,
-        lateFees: 0 
+        lateFees
       }
     };
 

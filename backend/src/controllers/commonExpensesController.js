@@ -2,7 +2,7 @@ import { getDb } from "../db.js";
 
 export const getCommonExpenses = async (req, res) => {
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
     const commonExpenses = await db.all("SELECT * FROM common_expenses");
 
     res.status(200).json(commonExpenses);
@@ -17,7 +17,7 @@ export const getCommonExpenses = async (req, res) => {
 export const createCommonExpense = async (req, res) => {
   const { description, amount, date } = req.body;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
     const result = await db.run(
       "INSERT INTO common_expenses (description, amount, date) VALUES (?, ?, ?)",
       [description, amount, date]
@@ -35,7 +35,7 @@ export const createCommonExpense = async (req, res) => {
 export const getCommonExpense = async (req, res) => {
   const expenseId = req.params.id;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const expense = await db.get("SELECT * FROM common_expenses WHERE id = ?", [expenseId]);
 
@@ -56,7 +56,7 @@ export const updateCommonExpense = async (req, res) => {
   const expenseId = req.params.id;
   const { description, amount, date } = req.body;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const expense = await db.get("SELECT * FROM common_expenses WHERE id = ?", [expenseId]);
 
@@ -81,7 +81,7 @@ export const updateCommonExpense = async (req, res) => {
 export const deleteCommonExpense = async (req, res) => {
   const expenseId = req.params.id;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const expense = await db.get("SELECT * FROM common_expenses WHERE id = ?", [expenseId]);
 

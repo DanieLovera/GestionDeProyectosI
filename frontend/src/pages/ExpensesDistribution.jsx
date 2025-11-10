@@ -1,5 +1,5 @@
 import MenuLayout from "../components/MenuLayout";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { getnPreviousMonth } from "../utils/getnPreviousMonth";
 import GenericSelect from "../components/GenericSelect.jsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +20,12 @@ export default function Reports() {
     const [showReceipt, setShowReceipt] = useState(false);
     const [receiptData, setReceiptData] = useState(null);
     const queryClient = useQueryClient();
+
+    // Invalidar queries cuando cambia el mes
+    useEffect(() => {
+        queryClient.invalidateQueries(["commonExpenses", chosenMonth]);
+        queryClient.invalidateQueries(["payments", chosenMonth]);
+    }, [chosenMonth, queryClient]);
 
     const {
         data: commonExpenses = [],
@@ -96,41 +102,18 @@ export default function Reports() {
         return map;
     }, [distribution]);
 
-    // mutación con actualización optimista de cache para payments del mes seleccionado
+    // mutación sin actualización optimista - solo invalidar y refetch
     const addPaymentMutation = useMutation({
         mutationFn: (payload) => addPaymentService(payload),
-        // optimista: añadir pago temporal a la cache (incluir unitId y unit_id)
-        onMutate: async (payload) => {
-            await queryClient.cancelQueries(["payments", chosenMonth]);
-            const previous = queryClient.getQueryData(["payments", chosenMonth]) || [];
-            const optimistic = {
-                id: `temp-${Date.now()}`,
-                ...payload,
-                unitId: payload.unitId ?? payload.unit_id ?? payload.unit,
-                unit_id: payload.unit_id ?? payload.unitId ?? payload.unit,
-            };
-            queryClient.setQueryData(["payments", chosenMonth], [...previous, optimistic]);
-            return { previous, optimisticId: optimistic.id };
-        },
-        onError: (err, payload, context) => {
-            // rollback
-            if (context?.previous) {
-                queryClient.setQueryData(["payments", chosenMonth], context.previous);
-            }
+        onError: (err) => {
             console.error("Error adding payment:", err);
             alert("No se pudo registrar el pago");
         },
-        onSuccess: (saved, payload, context) => {
-            // En lugar de actualizar manualmente, simplemente invalidar
-            // para forzar refetch desde el servidor
-            queryClient.invalidateQueries(["payments", chosenMonth]);
-        },
-        onSettled: async () => {
-            // Pequeña espera para asegurar que el backend procesó el pago
-            await new Promise(resolve => setTimeout(resolve, 100));
-            await queryClient.invalidateQueries(["payments", chosenMonth]);
-            await queryClient.invalidateQueries(["commonExpenses", chosenMonth]);
-            await queryClient.invalidateQueries(["departments"]);
+        onSuccess: async () => {
+            // Reset completo del cache para forzar refetch
+            queryClient.clear();
+            // Recargar la página después de un pequeño delay
+            setTimeout(() => window.location.reload(), 500);
         },
     });
 
