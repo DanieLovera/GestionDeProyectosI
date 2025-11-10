@@ -170,43 +170,6 @@ export default function Fees() {
             </div>
           )}
         </div>
-
-        {rows.length === 0 ? (
-          <p>No hay comisiones registradas.</p>
-        ) : (
-          <GenericTable
-            data={rows}
-            columns={[
-              { key: "description", label: "Descripción" },
-              { key: "date", label: "Fecha" },
-              {
-                key: "baseAmount",
-                label: "Base",
-                formatFn: (v) =>
-                  v.toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
-              },
-              {
-                key: "commission",
-                label: "Comisión",
-                formatFn: (v) =>
-                  v.toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
-              },
-              {
-                key: "actions",
-                label: "Acciones",
-                formatFn: (_, row) => (
-                  <button
-                    className="btn btn-sm btn-success"
-                    onClick={() => markPaid(row.id)}
-                  >
-                    Marcar como pagado
-                  </button>
-                ),
-              },
-            ]}
-            emptyMsg="No hay comisiones registradas."
-          />
-        )}
       </div>
     </MenuLayout>
   );
