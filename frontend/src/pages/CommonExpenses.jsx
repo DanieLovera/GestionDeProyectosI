@@ -24,7 +24,7 @@ export default function CommonExpenses() {
         isError,
     } = useQuery({
         queryKey: ["commonExpenses", chosenMonth],
-        queryFn: () => getCommonExpenses(parseInt(chosenMonth)),
+        queryFn: () => getCommonExpenses(chosenMonth),
     });
 
     const total = data.reduce((sum, item) => sum + (item.amount || 0), 0);
@@ -90,7 +90,14 @@ export default function CommonExpenses() {
                             {
                                 key: "date",
                                 label: "Fecha",
-                                formatFn: (value) => format(parseISO(value), "dd/MM/yyyy", { locale: es }),
+                                formatFn: (value) => {
+                                    try {
+                                        return format(parseISO(value), "dd/MM/yyyy", { locale: es });
+                                    } catch (e) {
+                                        console.error("Error formateando fecha:", value, e);
+                                        return value; // Devolver el valor sin formatear
+                                    }
+                                },
                             },
                         ]}
                         emptyMsg="No hay gastos para el mes seleccionado."

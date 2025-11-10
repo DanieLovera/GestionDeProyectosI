@@ -10,12 +10,25 @@ export async function setCommissionConfig(config) {
 
 export function getCommissionForMonth(month, config) {
   if (!config?.rate || !config?.base) return null;
-  const mm = month.toString().padStart(2, "0");
+  
+  // Manejar tanto el formato antiguo (número o "MM") como el nuevo ("yyyy-MM")
+  let yearMonth;
+  if (typeof month === 'string' && month.includes('-')) {
+    // Formato "yyyy-MM"
+    yearMonth = month;
+  } else {
+    // Formato antiguo: número o "MM"
+    const mm = month.toString().padStart(2, "0");
+    const year = new Date().getFullYear();
+    yearMonth = `${year}-${mm}`;
+  }
+  
   const amount = Math.round(config.base * config.rate);
-  const date = `2025-${mm}-28`;
+  const date = `${yearMonth}-28`;
+  
   return {
-    id: `commission-${mm}`,
-    description: `Comisión administración ${mm}/2025`,
+    id: `commission-${yearMonth}`,
+    description: `Comisión administración ${yearMonth}`,
     amount,
     date,
     __isCommission: true,

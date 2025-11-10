@@ -18,19 +18,27 @@ export default function Reports() {
   const [showMovements, setShowMovements] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState(null);
 
+  // Extraer solo el mes del formato "yyyy-MM" para los servicios que esperan número
+  const monthNumber = useMemo(() => {
+    if (typeof chosenMonth === 'string' && chosenMonth.includes('-')) {
+      return parseInt(chosenMonth.split('-')[1]); // "2025-10" -> 10
+    }
+    return parseInt(chosenMonth);
+  }, [chosenMonth]);
+
   const { data: dashboard } = useQuery({
     queryKey: ["reports-dashboard", chosenMonth],
-    queryFn: () => getDashboard(parseInt(chosenMonth)),
+    queryFn: () => getDashboard(monthNumber),
   });
 
   const { data: byUnit } = useQuery({
     queryKey: ["reports-by-unit", chosenMonth],
-    queryFn: () => getByUnit(parseInt(chosenMonth)),
+    queryFn: () => getByUnit(monthNumber),
   });
 
   const { data: byCategory } = useQuery({
     queryKey: ["reports-by-category", chosenMonth],
-    queryFn: () => getByCategory(parseInt(chosenMonth)),
+    queryFn: () => getByCategory(monthNumber),
   });
 
   const tableRows = useMemo(() => byUnit?.units || [], [byUnit]);

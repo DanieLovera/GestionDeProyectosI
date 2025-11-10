@@ -24,7 +24,7 @@ export default function IndividualExpenses() {
         isError,
     } = useQuery({
         queryKey: ["individualExpenses", chosenMonth],
-        queryFn: () => getIndividualExpenses(parseInt(chosenMonth)),
+        queryFn: () => getIndividualExpenses(chosenMonth),
     });
 
     const addExpenseMutation = useMutation({
@@ -80,7 +80,14 @@ export default function IndividualExpenses() {
                             {
                                 key: "date",
                                 label: "Fecha",
-                                formatFn: (value) => format(parseISO(value), "dd/MM/yyyy", { locale: es }),
+                                formatFn: (value) => {
+                                    try {
+                                        return format(parseISO(value), "dd/MM/yyyy", { locale: es });
+                                    } catch (e) {
+                                        console.error("Error formateando fecha:", value, e);
+                                        return value; // Devolver el valor sin formatear
+                                    }
+                                },
                             },
                             {
                                 key: "amount",

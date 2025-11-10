@@ -3,7 +3,6 @@ import * as apis from "../apis/individualExpenses.js";
 import { format, parseISO } from "date-fns";
 
 const getIndividualExpenses = async (month) => {
-  month = month.toString().padStart(2, "0");
   const individualExpenses = await apis.getIndividualExpenses();
 
   const expensesWithUnit = individualExpenses.map((e) => ({
@@ -12,7 +11,18 @@ const getIndividualExpenses = async (month) => {
   }));
 
   return expensesWithUnit
-    .filter((expense) => format(parseISO(expense.date), "MM") === month)
+    .filter((expense) => {
+      const expenseDate = format(parseISO(expense.date), "yyyy-MM");
+      
+      // Si month incluye el año (formato "yyyy-MM"), comparar completo
+      if (typeof month === 'string' && month.includes('-')) {
+        return expenseDate === month;
+      }
+      
+      // Si es solo el mes (número o string "MM"), comparar solo el mes
+      const mm = month.toString().padStart(2, "0");
+      return format(parseISO(expense.date), "MM") === mm;
+    })
     .sort((a, b) => {
       const departmentComparison = a.unit.localeCompare(b.unit);
       if (departmentComparison === 0) return new Date(b.date) - new Date(a.date);

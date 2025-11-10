@@ -4,9 +4,14 @@ import { exportToCsv } from '../utils/exportToCsv';
 import { useMemo } from 'react';
 
 export default function UnitAccountSection({ unitId, month }) {
+  // Extraer solo el mes del formato "yyyy-MM" si es necesario
+  const monthNumber = month && typeof month === 'string' && month.includes('-')
+    ? parseInt(month.split('-')[1])
+    : parseInt(month);
+    
   const { data, isLoading, isError } = useQuery({
     queryKey: ['reports-unit-account', unitId, month],
-    queryFn: () => getUnitMovements(unitId, parseInt(month)),
+    queryFn: () => getUnitMovements(unitId, monthNumber),
     enabled: !!unitId,
   });
 

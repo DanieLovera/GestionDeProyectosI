@@ -5,6 +5,12 @@ import { exportToCsv } from "../utils/exportToCsv";
 
 export default function UnitMovementsModal({ show, onClose, unit, month }) {
   const unitId = unit?.id;
+  
+  // Extraer solo el mes del formato "yyyy-MM" si es necesario
+  const monthNumber = month && typeof month === 'string' && month.includes('-')
+    ? parseInt(month.split('-')[1])
+    : parseInt(month);
+  
   const {
     data,
     isLoading,
@@ -12,7 +18,7 @@ export default function UnitMovementsModal({ show, onClose, unit, month }) {
     error,
   } = useQuery({
     queryKey: ["reports-unit-movements", unitId, month],
-    queryFn: () => getUnitMovements(unitId, parseInt(month)),
+    queryFn: () => getUnitMovements(unitId, monthNumber),
     enabled: show && Boolean(unitId),
   });
 
