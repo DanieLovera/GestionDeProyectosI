@@ -4,7 +4,7 @@ import { Parser } from "@json2csv/plainjs";
 export const getDashboardReport = async (req, res) => {
   const { month, year } = req.query;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const start = `${year}-${month}-01`;
     const end = `${year}-${month}-31`;
@@ -47,7 +47,7 @@ export const getDashboardReport = async (req, res) => {
 export const getByUnitReport = async (req, res) => {
   const { month, year } = req.query;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
     const start = `${year}-${month}-01`;
     const end = `${year}-${month}-31`;
 
@@ -106,7 +106,7 @@ export const getByUnitReport = async (req, res) => {
 export const getByCategoryReport = async (req, res) => {
   const { month, year } = req.query;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
     const start = `${year}-${month}-01`;
     const end = `${year}-${month}-31`;
 
@@ -128,7 +128,7 @@ export const getByCategoryReport = async (req, res) => {
 export const getUnitMovementsReport = async (req, res) => {
   const { unitId, month, year } = req.query;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
     const start = `${year}-${month}-01`;
     const end = `${year}-${month}-31`;
 
@@ -169,15 +169,15 @@ export const exportReport = async (req, res) => {
   try {
     let data;
     if (type === "by-unit") {
-      const fakeReq = { query: { month, year } };
+      const fakeReq = { query: { month, year }, tenantDb: req.tenantDb };
       const fakeRes = { status: () => ({ json: (d) => (data = d.units) }) };
       await getByUnitReport(fakeReq, fakeRes);
     } else if (type === "by-category") {
-      const fakeReq = { query: { month, year } };
+      const fakeReq = { query: { month, year }, tenantDb: req.tenantDb };
       const fakeRes = { status: () => ({ json: (d) => (data = d.categories) }) };
       await getByCategoryReport(fakeReq, fakeRes);
     } else {
-      const fakeReq = { query: { month, year } };
+      const fakeReq = { query: { month, year }, tenantDb: req.tenantDb };
       const fakeRes = { status: () => ({ json: (d) => (data = d.totals) }) };
       await getDashboardReport(fakeReq, fakeRes);
     }
