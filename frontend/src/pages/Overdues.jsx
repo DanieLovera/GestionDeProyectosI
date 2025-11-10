@@ -176,10 +176,21 @@ export default function Overdues() {
         const month = String(now.getMonth() + 1).padStart(2, "0");
         const year = String(now.getFullYear());
         const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const consortium = (typeof window !== "undefined" && localStorage.getItem("consortium")) || "";
+        
+        // Obtener token para autenticación
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.warn("No hay token de autenticación para generar moras");
+          generatedRef.current = true;
+          return;
+        }
+        
         const res = await fetch(`${apiBase.replace(/\/$/, "")}/overdues/generate?month=${month}&year=${year}`, {
           method: "POST",
-          headers: { "X-Consortium": consortium }
+          headers: { 
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
         });
         if (res.ok) {
           // opcional: leer respuesta para logs
@@ -191,7 +202,8 @@ export default function Overdues() {
           queryClient.invalidateQueries(["overdues"]);
           queryClient.invalidateQueries(["payments"]);
         } else {
-          console.warn("No se pudo generar moras automáticamente:", res.status);
+          const errorText = await res.text().catch(() => "");
+          console.warn("No se pudo generar moras automáticamente:", res.status, errorText);
         }
       } catch (err) {
         console.error("Error al invocar /overdues/generate:", err);
