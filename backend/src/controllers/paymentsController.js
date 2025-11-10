@@ -3,7 +3,7 @@ import { getDb } from "../db.js";
 export const getPayments = async (req, res) => {
   const { unitId, from, to, method } = req.query;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     let query = "SELECT * FROM payments WHERE 1=1";
     const params = [];
@@ -39,7 +39,7 @@ export const getPayments = async (req, res) => {
 export const createPayment = async (req, res) => {
   const { unitId, unit_id, amount, date, method, overdueId } = req.body;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     // Normalizar unitId (si viene como 'U1' queda null; asumimos ids numéricos en la BDD)
     const uidRaw = unitId ?? unit_id ?? null;
@@ -78,7 +78,7 @@ export const createPayment = async (req, res) => {
 export const getPayment = async (req, res) => {
   const paymentId = req.params.id;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const payment = await db.get("SELECT * FROM payments WHERE id = ?", [paymentId]);
 
@@ -99,7 +99,7 @@ export const updatePayment = async (req, res) => {
   const paymentId = req.params.id;
   const { amount, date, method } = req.body;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const payment = await db.get("SELECT * FROM payments WHERE id = ?", [paymentId]);
 
@@ -124,7 +124,7 @@ export const updatePayment = async (req, res) => {
 export const deletePayment = async (req, res) => {
   const paymentId = req.params.id;
   try {
-    const db = await getDb();
+    const db = req.tenantDb;
 
     const payment = await db.get("SELECT * FROM payments WHERE id = ?", [paymentId]);
 

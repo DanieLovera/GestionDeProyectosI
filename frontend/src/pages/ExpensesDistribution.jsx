@@ -121,23 +121,16 @@ export default function Reports() {
             alert("No se pudo registrar el pago");
         },
         onSuccess: (saved, payload, context) => {
-            const current = queryClient.getQueryData(["payments", chosenMonth]) || [];
-            const optimisticId = context?.optimisticId;
-            // normalizar saved (si backend devuelve unit_id)
-            const normalizedSaved = saved
-                ? { ...saved, unitId: saved.unitId ?? saved.unit_id ?? saved.unit, unit_id: saved.unit_id ?? saved.unitId ?? saved.unit }
-                : null;
-            let updated;
-            if (normalizedSaved && (normalizedSaved.id || normalizedSaved.amount)) {
-                updated = current.map((p) => (p.id === optimisticId ? normalizedSaved : p));
-            } else {
-                updated = current.map((p) => (p.id === optimisticId ? ({ id: `local-${Date.now()}`, ...payload, unitId: payload.unitId ?? payload.unit_id, unit_id: payload.unit_id ?? payload.unitId }) : p));
-            }
-            queryClient.setQueryData(["payments", chosenMonth], updated);
+            // En lugar de actualizar manualmente, simplemente invalidar
+            // para forzar refetch desde el servidor
             queryClient.invalidateQueries(["payments", chosenMonth]);
         },
-        onSettled: () => {
-            queryClient.invalidateQueries(["payments", chosenMonth]);
+        onSettled: async () => {
+            // Pequeña espera para asegurar que el backend procesó el pago
+            await new Promise(resolve => setTimeout(resolve, 100));
+            await queryClient.invalidateQueries(["payments", chosenMonth]);
+            await queryClient.invalidateQueries(["commonExpenses", chosenMonth]);
+            await queryClient.invalidateQueries(["departments"]);
         },
     });
 
